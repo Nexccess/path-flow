@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
-USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.3; +https://sample.pathflow.org)"
+USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.4; +https://sample.pathflow.org)"
 TIMEOUT_SECONDS = 8
 MAX_LINKS_TO_FOLLOW = 8
 
@@ -37,6 +37,7 @@ CHANNEL_ORDER = (
     "READY_LINE",
     "READY_INSTAGRAM",
     "READY_SMS",
+    "DISCOVERY_REQUIRED",
     "MANUAL_CHECK",
     "NO_CONTACT",
 )
@@ -283,7 +284,13 @@ def print_summary(conn: sqlite3.Connection) -> None:
     print(f"TOTAL={total}")
 
 
-def run(db: Path, limit: int | None = None, force: bool = False, summary_only: bool = False):
+def run(
+    db: Path,
+    limit: int | None = None,
+    force: bool = False,
+    summary_only: bool = False,
+    status_filter: str | None = None,
+):
     conn = sqlite3.connect(db)
     try:
         migrate_contact_columns(conn)
@@ -298,7 +305,10 @@ def run(db: Path, limit: int | None = None, force: bool = False, summary_only: b
             WHERE campaign_id=?
         """
         params: list[object] = [CAMPAIGN_ID]
-        if not force:
+        if status_filter:
+            sql += " AND contact_status=?"
+            params.append(status_filter)
+        elif not force:
             placeholders = ",".join("?" for _ in UNRESOLVED_STATUSES)
             sql += f" AND (contact_status IS NULL OR contact_status IN ({placeholders}))"
             params.extend(UNRESOLVED_STATUSES)
@@ -308,7 +318,7 @@ def run(db: Path, limit: int | None = None, force: bool = False, summary_only: b
             params.append(limit)
 
         rows = conn.execute(sql, params).fetchall()
-        print(f"enrichment_targets={len(rows)} force={force}")
+        print(f"enrichment_targets={len(rows)} force={force} status_filter={status_filter or '-'}")
         for (
             store_id, store_name, store_url, contact_source_url, _,
             existing_email, existing_form, existing_line, existing_instagram, phone,
@@ -379,8 +389,9 @@ def main():
     p.add_argument("--limit", type=int)
     p.add_argument("--force", action="store_true")
     p.add_argument("--summary", action="store_true", help="Print channel counts without enrichment")
+    p.add_argument("--status", help="Only enrich leads with this exact contact_status")
     args = p.parse_args()
-    run(args.db, args.limit, args.force, args.summary)
+    run(args.db, args.limit, args.force, args.summary, args.status)
 
 
 if __name__ == "__main__":
