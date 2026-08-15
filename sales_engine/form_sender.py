@@ -6,6 +6,11 @@ import os
 import sqlite3
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / ".env", override=False)
+
 from form_preflight import CAMPAIGN_ID, FIELD_HINTS, field_matches, inspect_form
 from templates import initial_body, subject
 
@@ -24,10 +29,16 @@ RESERVATION_HINTS = (
     "第1希望", "第2希望", "第3希望", "希望日", "希望時間", "予約日", "予約時間",
     "preferred date", "preferred time", "reservation date", "reservation time",
 )
+IDENTITY_EXACT_NAMES = {
+    "lastname", "firstname", "lastnamekana", "firstnamekana",
+    "姓", "名", "セイ", "メイ", "お名前（姓）", "お名前（名）", "氏名（姓）", "氏名（名）",
+    "姓カナ", "名カナ", "姓かな", "名かな", "salonname", "staffname",
+}
 
 
 def classify_field(field: dict) -> str | None:
     field_type = str(field.get("type", "")).lower()
+    name = str(field.get("name") or "").strip()
     if field_type == "hidden":
         return "hidden"
     if field_matches(field, FIELD_HINTS["email"]):
@@ -38,6 +49,8 @@ def classify_field(field: dict) -> str | None:
         return "subject"
     if field_matches(field, PHONE_HINTS):
         return "phone"
+    if name.lower() in {x.lower() for x in IDENTITY_EXACT_NAMES}:
+        return "name"
     if field_matches(field, FIELD_HINTS["name"]):
         return "name"
     return None
