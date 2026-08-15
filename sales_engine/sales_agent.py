@@ -24,6 +24,7 @@ def main() -> None:
     p.add_argument("--live", action="store_true", help="Enable real outbound email sends. Default is dry-run.")
     p.add_argument("--max-sends", type=int)
     p.add_argument("--skip-inbox", action="store_true", help="Skip Office365 inbox processing for local tests.")
+    p.add_argument("--inbox-only", action="store_true", help="Process inbox and print report without running outbound campaign actions.")
     p.add_argument("--skip-ollama-health", action="store_true")
     args = p.parse_args()
 
@@ -39,8 +40,11 @@ def main() -> None:
     else:
         print("inbox skipped")
 
-    result = run_campaign(args.db, live=args.live, max_sends=args.max_sends)
-    print("campaign=" + json.dumps(result, ensure_ascii=False))
+    if args.inbox_only:
+        print("campaign skipped (inbox-only mode)")
+    else:
+        result = run_campaign(args.db, live=args.live, max_sends=args.max_sends)
+        print("campaign=" + json.dumps(result, ensure_ascii=False))
 
     conn = sqlite3.connect(args.db)
     try:
