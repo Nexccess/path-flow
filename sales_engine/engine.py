@@ -8,6 +8,13 @@ from pathlib import Path
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
+ACTIONABLE_CONTACT_STATUSES = {
+    "READY_EMAIL",
+    "READY_FORM",
+    "READY_LINE",
+    "READY_INSTAGRAM",
+    "READY_SMS",
+}
 
 
 def now_iso() -> str:
@@ -84,18 +91,19 @@ def due_actions(conn, now: datetime | None = None):
     rows = conn.execute(
         """
         SELECT store_id, store_name, sales_status, initial_sent_at,
-               followup1_sent_at, followup2_sent_at, human_action
+               followup1_sent_at, followup2_sent_at, human_action, contact_status
         FROM leads
         WHERE campaign_id=?
         """,
         (CAMPAIGN_ID,),
     ).fetchall()
     actions = []
-    for store_id, store_name, status, initial_at, f1_at, f2_at, human_action in rows:
+    for store_id, store_name, status, initial_at, f1_at, f2_at, human_action, contact_status in rows:
         if human_action:
             continue
         if status == "READY":
-            actions.append((store_id, store_name, "initial"))
+            if contact_status in ACTIONABLE_CONTACT_STATUSES:
+                actions.append((store_id, store_name, "initial"))
             continue
         initial = parse_dt(initial_at)
         follow1 = parse_dt(f1_at)
@@ -132,6 +140,10 @@ def daily_summary(conn):
     result["HUMAN_ACTION"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1",
         (CAMPAIGN_ID,),
+    ).fetchone()[0]
+    result["ACTIONABLE_CONTACTS"] = conn.execute(
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status IN (?,?,?,?,?)",
+        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchone()[0]
     result["TOTAL"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=?",
