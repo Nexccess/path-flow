@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
-USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.4; +https://sample.pathflow.org)"
+USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.5; +https://sample.pathflow.org)"
 TIMEOUT_SECONDS = 8
 MAX_LINKS_TO_FOLLOW = 8
 
@@ -42,9 +42,47 @@ CHANNEL_ORDER = (
     "NO_CONTACT",
 )
 
+BAD_EMAIL_LOCAL_HINTS = (
+    "example", "sample", "test@", "instagram@", "facebook@", "twitter@",
+    "noreply", "no-reply", "donotreply", "do-not-reply",
+)
+BAD_EMAIL_DOMAIN_HINTS = (
+    "sentry.io", "sentry-next.wixpress.com", "wixpress.com",
+)
+BAD_EMAIL_TLDS = {
+    "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "css", "js", "woff", "woff2", "ttf", "map"
+}
+
 
 def now_iso() -> str:
     return datetime.now(JST).isoformat(timespec="seconds")
+
+
+def normalize_email(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = str(value).strip().strip("<>[](){}\"'.,;:")
+    return value or None
+
+
+def is_valid_contact_email(value: str | None) -> bool:
+    email = normalize_email(value)
+    if not email or not EMAIL_RE.fullmatch(email):
+        return False
+    low = email.lower()
+    local, domain = low.rsplit("@", 1)
+    if any(h in low for h in BAD_EMAIL_LOCAL_HINTS):
+        return False
+    if any(h in domain for h in BAD_EMAIL_DOMAIN_HINTS):
+        return False
+    if domain.startswith("localhost") or "." not in domain:
+        return False
+    tld = domain.rsplit(".", 1)[-1]
+    if tld in BAD_EMAIL_TLDS:
+        return False
+    if local in {"fb", "facebook", "instagram", "twitter", "x"}:
+        return False
+    return True
 
 
 def normalize_phone(value: str | None) -> str | None:
@@ -125,7 +163,7 @@ def extract_from_page(page_url: str, html: str):
     except Exception:
         pass
 
-    emails = set(EMAIL_RE.findall(html))
+    emails = {e for e in EMAIL_RE.findall(html) if is_valid_contact_email(e)}
     forms: list[str] = []
     lines: list[str] = []
     instagrams: list[str] = []
@@ -139,8 +177,8 @@ def extract_from_page(page_url: str, html: str):
         low = full.lower()
         text_low = text.lower()
         if low.startswith("mailto:"):
-            addr = href[7:].split("?", 1)[0].strip()
-            if addr:
+            addr = normalize_email(href[7:].split("?", 1)[0])
+            if is_valid_contact_email(addr):
                 emails.add(addr)
             continue
         if any(h in low for h in LINE_HINTS):
@@ -249,7 +287,8 @@ def choose_channel(
     fallback_status: str,
     fallback_confidence: str,
 ):
-    if email:
+    email = normalize_email(email)
+    if email and is_valid_contact_email(email):
         return "READY_EMAIL", "email", "HIGH", 1
     if form:
         return "READY_FORM", "form", "MEDIUM", 0
@@ -344,6 +383,10 @@ def run(
                         "instagram": None, "confidence": "LOW", "send_allowed": 0,
                     })
 
+            existing_email = normalize_email(existing_email)
+            if existing_email and not is_valid_contact_email(existing_email):
+                existing_email = None
+
             email = result.get("email") or existing_email
             form = result.get("form") or existing_form
             line = result.get("line") or existing_line
@@ -358,6 +401,8 @@ def run(
                 result.get("status", "NO_CONTACT"),
                 result.get("confidence", "LOW"),
             )
+            if status != "READY_EMAIL":
+                email = None
 
             conn.execute(
                 """
