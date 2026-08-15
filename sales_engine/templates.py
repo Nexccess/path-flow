@@ -2,10 +2,14 @@ from __future__ import annotations
 
 
 def subject(store_name: str, store_id: str) -> str:
-    return f"{store_name}様向けの来店前受付ページを作成しました [PF:{store_id}]"
+    return f"{store_name}様向けの来店前受付ページを作成しました"
 
 
-def initial_body(store_name: str, lp_url: str) -> str:
+def footer(store_id: str) -> str:
+    return f"""\n\n合同会社Nexccess\nPath-Flow\nEmail: info@nexccess.com\n\n今後この種のご案内が不要でしたら、その旨ご返信ください。以後のご案内を停止いたします。\n管理番号: PF-{store_id}"""
+
+
+def initial_body(store_name: str, store_id: str, lp_url: str) -> str:
     return f"""{store_name} 様
 
 突然のご連絡失礼いたします。
@@ -23,13 +27,10 @@ AIを導入していただくというより、Web上の受付スタッフを一
 
 現時点で費用が発生するものではありませんので、まず実際のページをご覧いただければと思います。
 
-もし「うちで使うなら少し調整したい」と感じていただけましたら、その際にご連絡ください。
-
-Path-Flow
-"""
+もし「うちで使うなら少し調整したい」と感じていただけましたら、その際にご連絡ください。""" + footer(store_id)
 
 
-def followup1_body(store_name: str, lp_url: str) -> str:
+def followup1_body(store_name: str, store_id: str, lp_url: str) -> str:
     return f"""{store_name} 様
 
 先日お送りした{store_name}様向けの受付ページについて、念のため再送いたします。
@@ -37,32 +38,26 @@ def followup1_body(store_name: str, lp_url: str) -> str:
 営業資料ではなく、実際に操作できるページです。
 お時間のある際に一度だけ触っていただければ内容をご確認いただけます。
 
-{lp_url}
-
-Path-Flow
-"""
+{lp_url}""" + footer(store_id)
 
 
-def followup2_body(store_name: str, lp_url: str) -> str:
+def followup2_body(store_name: str, store_id: str, lp_url: str) -> str:
     return f"""{store_name} 様
 
 {store_name}様向けに作成したページについて、最後にご案内だけお送りします。
 
 現時点でご予定がなければ、ご返信は不要です。
 
-{lp_url}
-
-Path-Flow
-"""
+{lp_url}""" + footer(store_id)
 
 
 def render(stage: str, store_name: str, store_id: str, lp_url: str) -> tuple[str, str]:
     if stage == "initial":
-        body = initial_body(store_name, lp_url)
+        body = initial_body(store_name, store_id, lp_url)
     elif stage == "followup1":
-        body = followup1_body(store_name, lp_url)
+        body = followup1_body(store_name, store_id, lp_url)
     elif stage == "followup2":
-        body = followup2_body(store_name, lp_url)
+        body = followup2_body(store_name, store_id, lp_url)
     else:
         raise ValueError(f"Unknown stage: {stage}")
     return subject(store_name, store_id), body
