@@ -20,8 +20,11 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
         sent_count = 0
         for store_id, store_name, stage in actions:
             if stage == "close":
-                close_no_response(conn, store_id)
-                conn.commit()
+                if live:
+                    close_no_response(conn, store_id)
+                    conn.commit()
+                else:
+                    print(f"DRY-RUN\tclose\t{store_id}\t{store_name}")
                 counts["close"] += 1
                 continue
 
@@ -47,11 +50,11 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
             if live:
                 assert client is not None
                 client.send_text(email, subject, body, dry_run=False)
+                mark_sent(conn, store_id, stage)
+                conn.commit()
             else:
                 print(f"DRY-RUN\t{stage}\t{store_id}\t{store_name}\t{email}\t{subject}")
 
-            mark_sent(conn, store_id, stage)
-            conn.commit()
             counts[stage] += 1
             sent_count += 1
         return counts
