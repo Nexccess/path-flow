@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
-USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.1; +https://sample.pathflow.org)"
+USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.2; +https://sample.pathflow.org)"
 TIMEOUT_SECONDS = 8
 MAX_LINKS_TO_FOLLOW = 8
 
@@ -27,6 +27,9 @@ INSTAGRAM_HINTS = ("instagram.com",)
 EXCLUDED_HOST_HINTS = (
     "beauty.hotpepper.jp", "maps.google.", "google.com/maps", "tabelog.com",
     "facebook.com", "x.com", "twitter.com"
+)
+UNRESOLVED_STATUSES = (
+    "PENDING", "LEGACY_NO_CONTACT", "NO_CONTACT", "MANUAL_CHECK", "FETCH_FAILED"
 )
 
 
@@ -206,63 +209,95 @@ def migrate_contact_columns(conn: sqlite3.Connection):
     conn.commit()
 
 
+def choose_start_url(contact_source_url: str | None, store_url: str | None) -> str | None:
+    for candidate in (contact_source_url, store_url):
+        if candidate and not is_excluded_source(candidate):
+            return candidate
+    return contact_source_url or store_url
+
+
 def run(db: Path, limit: int | None = None, force: bool = False):
     conn = sqlite3.connect(db)
     try:
         migrate_contact_columns(conn)
         sql = """
-            SELECT store_id, store_name, store_url, contact_status
+            SELECT store_id, store_name, store_url, contact_source_url, contact_status,
+                   email, contact_form_url, line_url, instagram_url
             FROM leads
             WHERE campaign_id=?
         """
         params: list[object] = [CAMPAIGN_ID]
         if not force:
-            sql += " AND (contact_status IS NULL OR contact_status='PENDING')"
+            placeholders = ",".join("?" for _ in UNRESOLVED_STATUSES)
+            sql += f" AND (contact_status IS NULL OR contact_status IN ({placeholders}))"
+            params.extend(UNRESOLVED_STATUSES)
         sql += " ORDER BY store_id"
         if limit:
             sql += " LIMIT ?"
             params.append(limit)
 
         rows = conn.execute(sql, params).fetchall()
-        for store_id, store_name, store_url, _ in rows:
-            if not store_url or is_excluded_source(store_url):
+        print(f"enrichment_targets={len(rows)} force={force}")
+        for (
+            store_id, store_name, store_url, contact_source_url, _,
+            existing_email, existing_form, existing_line, existing_instagram,
+        ) in rows:
+            start_url = choose_start_url(contact_source_url, store_url)
+            if not start_url or is_excluded_source(start_url):
                 result = {
-                    "status": "MANUAL_CHECK" if store_url else "NO_CONTACT",
+                    "status": "MANUAL_CHECK" if start_url else "NO_CONTACT",
                     "channel": None,
                     "email": None,
                     "form": None,
                     "line": None,
                     "instagram": None,
-                    "source": store_url,
+                    "source": start_url,
                     "confidence": "LOW",
                     "send_allowed": 0,
                 }
             else:
-                result = enrich_url(store_url)
+                result = enrich_url(start_url)
                 if result.get("status") == "FETCH_FAILED":
                     result.update({
                         "channel": None, "email": None, "form": None, "line": None,
                         "instagram": None, "confidence": "LOW", "send_allowed": 0,
                     })
 
+            email = result.get("email") or existing_email
+            form = result.get("form") or existing_form
+            line = result.get("line") or existing_line
+            instagram = result.get("instagram") or existing_instagram
+
+            if email:
+                status, channel, confidence, allowed = "READY_EMAIL", "email", "HIGH", 1
+            elif form:
+                status, channel, confidence, allowed = "READY_FORM", "form", "MEDIUM", 0
+            elif line:
+                status, channel, confidence, allowed = "READY_LINE", "line", "MEDIUM", 0
+            elif instagram:
+                status, channel, confidence, allowed = "READY_INSTAGRAM", "instagram", "MEDIUM", 0
+            else:
+                status = result["status"]
+                channel = None
+                confidence = result.get("confidence", "LOW")
+                allowed = 0
+
             conn.execute(
                 """
                 UPDATE leads SET
                   contact_status=?, primary_channel=?, email=?, contact_form_url=?,
-                  line_url=?, instagram_url=?, contact_source_url=?, contact_checked_at=?,
-                  contact_confidence=?, send_allowed=?, screening_status=?, updated_at=?
+                  line_url=?, instagram_url=?, contact_source_url=COALESCE(?, contact_source_url),
+                  contact_checked_at=?, contact_confidence=?, send_allowed=?, screening_status=?, updated_at=?
                 WHERE campaign_id=? AND store_id=?
                 """,
                 (
-                    result["status"], result.get("channel"), result.get("email"), result.get("form"),
-                    result.get("line"), result.get("instagram"), result.get("source"), now_iso(),
-                    result.get("confidence"), result.get("send_allowed", 0),
-                    "READY" if result.get("send_allowed") else "REVIEW",
+                    status, channel, email, form, line, instagram, result.get("source"), now_iso(),
+                    confidence, allowed, "READY" if allowed else ("FORM_READY" if form else "REVIEW"),
                     now_iso(), CAMPAIGN_ID, store_id,
                 ),
             )
             conn.commit()
-            print(f"{store_id}\t{store_name}\t{result['status']}\t{result.get('channel') or '-'}")
+            print(f"{store_id}\t{store_name}\t{status}\t{channel or '-'}\t{start_url or '-'}")
             time.sleep(0.2)
     finally:
         conn.close()
