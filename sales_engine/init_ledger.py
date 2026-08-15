@@ -24,11 +24,20 @@ def clean(value):
     return value or None
 
 
+def ensure_columns(conn: sqlite3.Connection) -> None:
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(leads)")}
+    if "google_place_id" not in columns:
+        conn.execute("ALTER TABLE leads ADD COLUMN google_place_id TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_leads_place_id ON leads(campaign_id, google_place_id)")
+        conn.commit()
+
+
 def main() -> None:
     args = parse_args()
     conn = sqlite3.connect(args.db)
     try:
         conn.executescript(args.schema.read_text(encoding="utf-8"))
+        ensure_columns(conn)
         conn.execute(
             """
             INSERT OR IGNORE INTO campaigns
@@ -45,10 +54,11 @@ def main() -> None:
             conn.execute(
                 """
                 INSERT INTO leads (
-                  campaign_id, store_id, store_name, area, industry, address, phone,
+                  campaign_id, store_id, google_place_id, store_name, area, industry, address, phone,
                   store_url, lp_url, screening_status, sales_status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'READY')
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'READY')
                 ON CONFLICT(campaign_id, store_id) DO UPDATE SET
+                  google_place_id=excluded.google_place_id,
                   store_name=excluded.store_name,
                   area=excluded.area,
                   industry=excluded.industry,
@@ -61,6 +71,7 @@ def main() -> None:
                 (
                     CAMPAIGN_ID,
                     clean(row.get("店舗ID")),
+                    clean(row.get("Google_Place_ID")),
                     clean(row.get("店舗名")),
                     clean(row.get("地域")),
                     clean(row.get("業種")),
@@ -75,7 +86,11 @@ def main() -> None:
         count = conn.execute(
             "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (CAMPAIGN_ID,)
         ).fetchone()[0]
-        print(f"campaign={CAMPAIGN_ID} leads={count} db={args.db}")
+        place_count = conn.execute(
+            "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND google_place_id IS NOT NULL AND google_place_id!=''",
+            (CAMPAIGN_ID,),
+        ).fetchone()[0]
+        print(f"campaign={CAMPAIGN_ID} leads={count} place_ids={place_count} db={args.db}")
         if count != 113:
             raise SystemExit(f"Expected 113 leads, got {count}")
     finally:
