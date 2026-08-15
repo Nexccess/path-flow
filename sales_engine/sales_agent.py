@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -18,7 +19,16 @@ from ollama_client import OllamaClient
 from response_watcher import run as run_response_watcher
 
 
+def configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+        except Exception:
+            pass
+
+
 def main() -> None:
+    configure_stdout()
     p = argparse.ArgumentParser(description="Path-Flow Sales Agent orchestrator")
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
     p.add_argument("--live", action="store_true", help="Enable real outbound email sends. Default is dry-run.")
