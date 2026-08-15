@@ -21,8 +21,16 @@ CREATE TABLE IF NOT EXISTS leads (
   phone TEXT,
   store_url TEXT,
   lp_url TEXT,
-  contact_channel TEXT,
-  contact_address TEXT,
+  contact_status TEXT NOT NULL DEFAULT 'PENDING',
+  primary_channel TEXT,
+  email TEXT,
+  contact_form_url TEXT,
+  line_url TEXT,
+  instagram_url TEXT,
+  contact_source_url TEXT,
+  contact_checked_at TEXT,
+  contact_confidence TEXT,
+  send_allowed INTEGER NOT NULL DEFAULT 0,
   screening_status TEXT NOT NULL DEFAULT 'PENDING',
   sales_status TEXT NOT NULL DEFAULT 'READY',
   response_type TEXT,
@@ -52,5 +60,6 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(campaign_id, sales_status);
+CREATE INDEX IF NOT EXISTS idx_leads_contact_status ON leads(campaign_id, contact_status);
 CREATE INDEX IF NOT EXISTS idx_leads_human_action ON leads(campaign_id, human_action);
 CREATE INDEX IF NOT EXISTS idx_events_store ON events(campaign_id, store_id, event_at);
