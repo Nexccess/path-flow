@@ -25,6 +25,15 @@ BLOCK_PHRASES = (
     "勧誘目的", "売り込み", "営業・勧誘", "営業等", "営業はお断り", "営業お断り",
     "sales solicitation", "no solicitation", "solicitation prohibited",
 )
+THIRD_PARTY_HOST_HINTS = (
+    "beauty.hotpepper.jp",
+    "minimodel.jp",
+    "page.line.me",
+    "line.me",
+    "lin.ee",
+    "instagram.com",
+    "facebook.com",
+)
 CONTACT_HINTS = (
     "お問い合わせ", "問い合わせ", "contact", "inquiry", "ご相談", "相談"
 )
@@ -101,10 +110,31 @@ def field_matches(field: dict, hints: tuple[str, ...]) -> bool:
     return any(h.lower() in hay for h in hints)
 
 
+def is_third_party(url: str) -> bool:
+    host = urlparse(url).netloc.lower().split(":")[0]
+    return any(h == host or host.endswith("." + h) for h in THIRD_PARTY_HOST_HINTS)
+
+
 def inspect_form(url: str) -> dict:
+    if is_third_party(url):
+        return {
+            "decision": "BLOCKED_THIRD_PARTY",
+            "send_allowed": False,
+            "reason": "HotPepper/LINE/Instagram等の第三者プラットフォームです。店舗公式問い合わせフォームとして自動送信しません。",
+            "url": url,
+        }
+
     html, final_url, status_code = fetch_html(url)
     if not html or not final_url:
         return {"decision": "FETCH_FAILED", "send_allowed": False, "reason": "フォームページを取得できませんでした。", "url": url}
+
+    if is_third_party(final_url):
+        return {
+            "decision": "BLOCKED_THIRD_PARTY",
+            "send_allowed": False,
+            "reason": "取得先が第三者プラットフォームへ遷移しました。店舗公式問い合わせフォームとして自動送信しません。",
+            "url": final_url,
+        }
 
     low = html.lower()
     if any(h in low for h in CAPTCHA_HINTS):
@@ -164,7 +194,7 @@ def inspect_form(url: str) -> dict:
     return {
         "decision": "AUTO_READY",
         "send_allowed": True,
-        "reason": "CAPTCHA・営業禁止文言を検出せず、同一サイトのPOSTフォームを特定しました。",
+        "reason": "CAPTCHA・営業禁止文言・第三者プラットフォームを検出せず、同一サイトのPOSTフォームを特定しました。",
         "url": final_url,
         "selected_form": selected,
         "http_status": status_code,
@@ -200,6 +230,7 @@ def run(db: Path, limit: int | None = None, apply: bool = False) -> dict:
                     "AUTO_READY": "FORM_AUTO_READY",
                     "BLOCKED_CAPTCHA": "FORM_BLOCKED_CAPTCHA",
                     "BLOCKED_POLICY": "FORM_BLOCKED_POLICY",
+                    "BLOCKED_THIRD_PARTY": "FORM_BLOCKED_THIRD_PARTY",
                     "FETCH_FAILED": "FORM_FETCH_FAILED",
                 }.get(decision, "FORM_REVIEW")
                 conn.execute(
