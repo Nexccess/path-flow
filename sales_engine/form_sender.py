@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sqlite3
 from pathlib import Path
 
@@ -34,11 +35,22 @@ IDENTITY_EXACT_NAMES = {
     "姓", "名", "セイ", "メイ", "お名前（姓）", "お名前（名）", "氏名（姓）", "氏名（名）",
     "姓カナ", "名カナ", "姓かな", "名かな", "salonname", "staffname",
 }
+HONEYPOT_HINTS = (
+    "_wpcf7_ak_hp_", "honeypot", "honey-pot", "hp_textarea", "antispam", "anti-spam"
+)
+PHONE_SEGMENT_RE = re.compile(r"\[(?:data)?\]\[(\d+)\]$", re.I)
+
+
+def is_honeypot_field(field: dict) -> bool:
+    hay = " ".join(str(field.get(k, "")) for k in ("name", "id", "placeholder")).lower()
+    return any(h in hay for h in HONEYPOT_HINTS)
 
 
 def classify_field(field: dict) -> str | None:
     field_type = str(field.get("type", "")).lower()
     name = str(field.get("name") or "").strip()
+    if is_honeypot_field(field):
+        return "honeypot"
     if field_type == "hidden":
         return "hidden"
     if field_matches(field, FIELD_HINTS["email"]):
@@ -84,6 +96,34 @@ def field_identity_value(field: dict) -> tuple[str | None, str | None]:
     return SENDER_COMPANY, "name"
 
 
+def phone_parts(phone: str) -> list[str]:
+    raw_parts = [p for p in re.split(r"\D+", phone.strip()) if p]
+    if len(raw_parts) == 3:
+        return raw_parts
+
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) == 11:
+        return [digits[:3], digits[3:7], digits[7:]]
+    if len(digits) == 10:
+        if digits.startswith(("03", "06")):
+            return [digits[:2], digits[2:6], digits[6:]]
+        return [digits[:3], digits[3:6], digits[6:]]
+    return [digits] if digits else []
+
+
+def phone_value_for_field(field_name: str) -> tuple[str | None, str]:
+    if not SENDER_PHONE:
+        return None, "phone"
+    m = PHONE_SEGMENT_RE.search(field_name)
+    if not m:
+        return SENDER_PHONE, "phone"
+    parts = phone_parts(SENDER_PHONE)
+    idx = int(m.group(1))
+    if len(parts) == 3 and 0 <= idx < 3:
+        return parts[idx], f"phone_segment_{idx}"
+    return None, f"phone_segment_{idx}"
+
+
 def build_plan(store_id: str, store_name: str, lp_url: str, form_url: str) -> dict:
     audit = inspect_form(form_url)
     if audit.get("decision") != "AUTO_READY":
@@ -116,7 +156,10 @@ def build_plan(store_id: str, store_name: str, lp_url: str, form_url: str) -> di
             unknown_required.append({"name": name, "type": field_type, "reason": "required reservation field is not appropriate for sales outreach"})
             continue
 
-        if role == "hidden":
+        if role == "honeypot":
+            payload[name] = ""
+            mapped.append({"name": name, "role": "honeypot_blank"})
+        elif role == "hidden":
             payload[name] = str(field.get("value") or "")
             mapped.append({"name": name, "role": "hidden"})
         elif role == "email":
@@ -136,11 +179,12 @@ def build_plan(store_id: str, store_name: str, lp_url: str, form_url: str) -> di
             payload[name] = mail_subject
             mapped.append({"name": name, "role": "subject"})
         elif role == "phone":
-            if SENDER_PHONE:
-                payload[name] = SENDER_PHONE
-                mapped.append({"name": name, "role": "phone"})
-            elif required:
-                unknown_required.append({"name": name, "type": field_type, "reason": "required phone field has no PF_SENDER_PHONE configuration"})
+            value, phone_role = phone_value_for_field(name)
+            if value:
+                payload[name] = value
+                mapped.append({"name": name, "role": phone_role})
+            elif required or PHONE_SEGMENT_RE.search(name):
+                unknown_required.append({"name": name, "type": field_type, "reason": "phone field could not be safely mapped from PF_SENDER_PHONE"})
         elif required:
             if field_type in {"checkbox", "radio"} or any(h in hay for h in CONSENT_HINTS):
                 reason = "required consent/choice field requires explicit semantics"
