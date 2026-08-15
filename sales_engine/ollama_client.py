@@ -19,6 +19,14 @@ RESPONSE_LABELS = (
     "UNKNOWN",
 )
 
+HUMAN_LABELS = {
+    "INTERESTED",
+    "PRICE_INQUIRY",
+    "QUESTION",
+    "CONSIDERING",
+    "UNKNOWN",
+}
+
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -58,21 +66,24 @@ class OllamaClient:
 
     def classify_response(self, *, store_name: str, subject: str, body_preview: str) -> dict:
         prompt = f"""あなたはPath-Flowの営業返信分類エージェントです。
-以下の返信内容だけを根拠に分類してください。
+以下の返信内容だけを根拠に、必ず1つだけ分類してください。
 
-【分類】
-INTERESTED: 導入・打合せ・詳しい説明を前向きに希望
-PRICE_INQUIRY: 料金・費用・契約条件について質問
-QUESTION: 機能・仕様・使い方など一般的な質問
-CONSIDERING: 検討する、社内確認する、後で見る等
-DECLINED: 不要、営業停止、今後連絡不要など明確な拒否
-AUTO_REPLY: 不在通知、受付完了、自動返信
-UNKNOWN: 上記に安全に分類できない
+【分類ルール】
+INTERESTED: 導入したい、詳しく聞きたい、打合せしたい、説明してほしい等の前向きな意思
+PRICE_INQUIRY: 料金、価格、費用、月額、初期費用、契約期間、支払条件を尋ねている
+QUESTION: 機能、仕様、連携、使い方、対応可否などの質問。料金の質問ではない
+CONSIDERING: 検討する、社内確認する、後で見る、相談してみる等で、まだ具体的な質問や打合せ希望はない
+DECLINED: 不要、興味なし、営業停止、今後連絡不要など明確な拒否
+AUTO_REPLY: 不在通知、受付完了通知、自動応答
+UNKNOWN: 内容が短すぎる、曖昧、または上記に安全に分類できない
 
-【人間対応】
-INTERESTED / PRICE_INQUIRY / QUESTION / CONSIDERING / UNKNOWN は needs_human=true。
-DECLINED / AUTO_REPLY は needs_human=false。
-判断に迷う場合は UNKNOWN としてください。
+【優先ルール】
+1. 「料金・価格・費用・月額・初期費用・契約・支払」に直接触れていなければ PRICE_INQUIRY にしない。
+2. 「連携できますか」「対応していますか」「どう使いますか」等は QUESTION。
+3. 前向きでも、単に「検討します」だけなら CONSIDERING。
+4. 判断に迷う場合は UNKNOWN。
+
+needs_human は参考出力であり、最終判定はシステム側で上書きされます。
 
 店舗名: {store_name}
 件名: {subject}
@@ -90,7 +101,11 @@ DECLINED / AUTO_REPLY は needs_human=false。
         res.raise_for_status()
         raw = res.json().get("response", "")
         data = json.loads(raw)
-        if data.get("label") not in RESPONSE_LABELS:
-            raise ValueError(f"Unexpected response label: {data.get('label')}")
+        label = data.get("label")
+        if label not in RESPONSE_LABELS:
+            raise ValueError(f"Unexpected response label: {label}")
+
         data["confidence"] = float(data.get("confidence", 0))
+        # Safety policy is deterministic. Never let the LLM decide whether a human must see a reply.
+        data["needs_human"] = label in HUMAN_LABELS
         return data
