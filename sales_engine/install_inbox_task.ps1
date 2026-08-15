@@ -21,12 +21,15 @@ $Command = "& '$Python' '$Agent' --inbox-only *>> '$LogFile'"
 $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"$Command`"" -WorkingDirectory $RepoRoot
 
 $StartAt = (Get-Date).AddMinutes(1)
-$Trigger = New-ScheduledTaskTrigger -Once -At $StartAt -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) -RepetitionDuration ([TimeSpan]::MaxValue)
+# Windows Task Scheduler rejects TimeSpan::MaxValue in repetition duration XML.
+# Use a long but valid finite duration and recreate the task when needed.
+$Trigger = New-ScheduledTaskTrigger -Once -At $StartAt -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) -RepetitionDuration (New-TimeSpan -Days 3650)
 $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
 
 Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Settings $Settings -Description "Checks info@nexccess.com, classifies Path-Flow replies with local Ollama, updates sales_engine.db, and writes a local log." -Force | Out-Null
 
 Write-Host "Installed scheduled task: $TaskName"
 Write-Host "Interval: every $IntervalMinutes minutes"
+Write-Host "Duration: 3650 days"
 Write-Host "Log: $LogFile"
 Write-Host "The task runs only while Windows is available. It does not send outbound campaign mail."
