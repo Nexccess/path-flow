@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
 CREATE TABLE IF NOT EXISTS leads (
   campaign_id TEXT NOT NULL,
   store_id TEXT NOT NULL,
+  google_place_id TEXT,
   store_name TEXT NOT NULL,
   area TEXT,
   industry TEXT,
@@ -60,6 +61,7 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(campaign_id, sales_status);
+CREATE INDEX IF NOT EXISTS idx_leads_place_id ON leads(campaign_id, google_place_id);
 CREATE INDEX IF NOT EXISTS idx_leads_contact_status ON leads(campaign_id, contact_status);
 CREATE INDEX IF NOT EXISTS idx_leads_human_action ON leads(campaign_id, human_action);
 CREATE INDEX IF NOT EXISTS idx_events_store ON events(campaign_id, store_id, event_at);
