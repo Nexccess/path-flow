@@ -2,14 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load local secrets/settings from repository-root .env before importing modules
+# that read environment variables. Existing shell variables take precedence.
+ROOT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / ".env", override=False)
 
 from campaign_runner import run as run_campaign
 from daily_report import report as build_report
 from ollama_client import OllamaClient
 from response_watcher import run as run_response_watcher
-
-import sqlite3
 
 
 def main() -> None:
