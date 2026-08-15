@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
-USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.2; +https://sample.pathflow.org)"
+USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.3; +https://sample.pathflow.org)"
 TIMEOUT_SECONDS = 8
 MAX_LINKS_TO_FOLLOW = 8
 
@@ -31,10 +31,33 @@ EXCLUDED_HOST_HINTS = (
 UNRESOLVED_STATUSES = (
     "PENDING", "LEGACY_NO_CONTACT", "NO_CONTACT", "MANUAL_CHECK", "FETCH_FAILED"
 )
+CHANNEL_ORDER = (
+    "READY_EMAIL",
+    "READY_FORM",
+    "READY_LINE",
+    "READY_INSTAGRAM",
+    "READY_SMS",
+    "MANUAL_CHECK",
+    "NO_CONTACT",
+)
 
 
 def now_iso() -> str:
     return datetime.now(JST).isoformat(timespec="seconds")
+
+
+def normalize_phone(value: str | None) -> str | None:
+    if not value:
+        return None
+    digits = re.sub(r"\D", "", str(value))
+    if digits.startswith("81") and len(digits) >= 11:
+        digits = "0" + digits[2:]
+    return digits or None
+
+
+def sms_capable(phone: str | None) -> bool:
+    normalized = normalize_phone(phone)
+    return bool(normalized and re.fullmatch(r"0(?:70|80|90)\d{8}", normalized))
 
 
 class LinkParser(HTMLParser):
@@ -216,13 +239,61 @@ def choose_start_url(contact_source_url: str | None, store_url: str | None) -> s
     return contact_source_url or store_url
 
 
-def run(db: Path, limit: int | None = None, force: bool = False):
+def choose_channel(
+    email: str | None,
+    form: str | None,
+    line: str | None,
+    instagram: str | None,
+    phone: str | None,
+    fallback_status: str,
+    fallback_confidence: str,
+):
+    if email:
+        return "READY_EMAIL", "email", "HIGH", 1
+    if form:
+        return "READY_FORM", "form", "MEDIUM", 0
+    if line:
+        return "READY_LINE", "line", "MEDIUM", 0
+    if instagram:
+        return "READY_INSTAGRAM", "instagram", "MEDIUM", 0
+    if sms_capable(phone):
+        return "READY_SMS", "sms", "MEDIUM", 0
+    status = fallback_status if fallback_status in {"MANUAL_CHECK", "NO_CONTACT", "FETCH_FAILED"} else "NO_CONTACT"
+    return status, None, fallback_confidence or "LOW", 0
+
+
+def print_summary(conn: sqlite3.Connection) -> None:
+    counts = {
+        status: conn.execute(
+            "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status=?",
+            (CAMPAIGN_ID, status),
+        ).fetchone()[0]
+        for status in CHANNEL_ORDER
+    }
+    known = sum(counts.values())
+    total = conn.execute(
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (CAMPAIGN_ID,)
+    ).fetchone()[0]
+    other = total - known
+    print("--- channel_summary ---")
+    for status in CHANNEL_ORDER:
+        print(f"{status}={counts[status]}")
+    if other:
+        print(f"OTHER={other}")
+    print(f"TOTAL={total}")
+
+
+def run(db: Path, limit: int | None = None, force: bool = False, summary_only: bool = False):
     conn = sqlite3.connect(db)
     try:
         migrate_contact_columns(conn)
+        if summary_only:
+            print_summary(conn)
+            return
+
         sql = """
             SELECT store_id, store_name, store_url, contact_source_url, contact_status,
-                   email, contact_form_url, line_url, instagram_url
+                   email, contact_form_url, line_url, instagram_url, phone
             FROM leads
             WHERE campaign_id=?
         """
@@ -240,7 +311,7 @@ def run(db: Path, limit: int | None = None, force: bool = False):
         print(f"enrichment_targets={len(rows)} force={force}")
         for (
             store_id, store_name, store_url, contact_source_url, _,
-            existing_email, existing_form, existing_line, existing_instagram,
+            existing_email, existing_form, existing_line, existing_instagram, phone,
         ) in rows:
             start_url = choose_start_url(contact_source_url, store_url)
             if not start_url or is_excluded_source(start_url):
@@ -268,19 +339,15 @@ def run(db: Path, limit: int | None = None, force: bool = False):
             line = result.get("line") or existing_line
             instagram = result.get("instagram") or existing_instagram
 
-            if email:
-                status, channel, confidence, allowed = "READY_EMAIL", "email", "HIGH", 1
-            elif form:
-                status, channel, confidence, allowed = "READY_FORM", "form", "MEDIUM", 0
-            elif line:
-                status, channel, confidence, allowed = "READY_LINE", "line", "MEDIUM", 0
-            elif instagram:
-                status, channel, confidence, allowed = "READY_INSTAGRAM", "instagram", "MEDIUM", 0
-            else:
-                status = result["status"]
-                channel = None
-                confidence = result.get("confidence", "LOW")
-                allowed = 0
+            status, channel, confidence, allowed = choose_channel(
+                email,
+                form,
+                line,
+                instagram,
+                phone,
+                result.get("status", "NO_CONTACT"),
+                result.get("confidence", "LOW"),
+            )
 
             conn.execute(
                 """
@@ -292,13 +359,16 @@ def run(db: Path, limit: int | None = None, force: bool = False):
                 """,
                 (
                     status, channel, email, form, line, instagram, result.get("source"), now_iso(),
-                    confidence, allowed, "READY" if allowed else ("FORM_READY" if form else "REVIEW"),
+                    confidence, allowed,
+                    "READY" if status == "READY_EMAIL" else ("FORM_READY" if status == "READY_FORM" else "REVIEW"),
                     now_iso(), CAMPAIGN_ID, store_id,
                 ),
             )
             conn.commit()
             print(f"{store_id}\t{store_name}\t{status}\t{channel or '-'}\t{start_url or '-'}")
             time.sleep(0.2)
+
+        print_summary(conn)
     finally:
         conn.close()
 
@@ -308,8 +378,9 @@ def main():
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
     p.add_argument("--limit", type=int)
     p.add_argument("--force", action="store_true")
+    p.add_argument("--summary", action="store_true", help="Print channel counts without enrichment")
     args = p.parse_args()
-    run(args.db, args.limit, args.force)
+    run(args.db, args.limit, args.force, args.summary)
 
 
 if __name__ == "__main__":
