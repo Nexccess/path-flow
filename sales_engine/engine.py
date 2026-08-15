@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -88,22 +89,23 @@ def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_
 
 def due_actions(conn, now: datetime | None = None):
     now = now or datetime.now(JST)
+    placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     rows = conn.execute(
-        """
+        f"""
         SELECT store_id, store_name, sales_status, initial_sent_at,
                followup1_sent_at, followup2_sent_at, human_action, contact_status
         FROM leads
         WHERE campaign_id=?
+          AND contact_status IN ({placeholders})
         """,
-        (CAMPAIGN_ID,),
+        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchall()
     actions = []
-    for store_id, store_name, status, initial_at, f1_at, f2_at, human_action, contact_status in rows:
+    for store_id, store_name, status, initial_at, f1_at, f2_at, human_action, _contact_status in rows:
         if human_action:
             continue
         if status == "READY":
-            if contact_status in ACTIONABLE_CONTACT_STATUSES:
-                actions.append((store_id, store_name, "initial"))
+            actions.append((store_id, store_name, "initial"))
             continue
         initial = parse_dt(initial_at)
         follow1 = parse_dt(f1_at)
@@ -141,8 +143,9 @@ def daily_summary(conn):
         "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1",
         (CAMPAIGN_ID,),
     ).fetchone()[0]
+    placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     result["ACTIONABLE_CONTACTS"] = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status IN (?,?,?,?,?)",
+        f"SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status IN ({placeholders})",
         (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchone()[0]
     result["TOTAL"] = conn.execute(
@@ -152,17 +155,29 @@ def daily_summary(conn):
     return result
 
 
+def configure_stdout() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
 def main():
+    configure_stdout()
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
     p.add_argument("--summary", action="store_true")
     p.add_argument("--due", action="store_true")
+    p.add_argument("--due-count", action="store_true", help="Print only the number of due actions")
     args = p.parse_args()
     conn = sqlite3.connect(args.db)
     try:
         if args.summary:
             print(json.dumps(daily_summary(conn), ensure_ascii=False, indent=2))
-        if args.due:
+        if args.due_count:
+            print(len(due_actions(conn)))
+        elif args.due:
             for action in due_actions(conn):
                 print("\t".join(action))
     finally:
