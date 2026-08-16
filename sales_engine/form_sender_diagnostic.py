@@ -4,15 +4,65 @@ import argparse
 import json
 import re
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from form_preflight import CAMPAIGN_ID, USER_AGENT
-from form_sender import build_plan, previous_submission_attempt
+from form_sender import (
+    FAILURE_HINTS,
+    SUCCESS_HINTS,
+    append_submission_log,
+    build_plan,
+    previous_submission_attempt,
+)
 
 TIMEOUT_SECONDS = 15
+CF7_HINTS = ("_wpcf7", "wpcf7-response-output", "wpcf7-form")
+
+
+def _extract_cf7_response(text: str) -> str | None:
+    patterns = (
+        r'<div[^>]*class=["\'][^"\']*wpcf7-response-output[^"\']*["\'][^>]*>(.*?)</div>',
+        r'<div[^>]*class=["\'][^"\']*screen-reader-response[^"\']*["\'][^>]*>(.*?)</div>',
+    )
+    for pattern in patterns:
+        m = re.search(pattern, text, flags=re.I | re.S)
+        if m:
+            value = re.sub(r"<[^>]+>", " ", m.group(1))
+            value = re.sub(r"\s+", " ", value).strip()
+            if value:
+                return value[:800]
+    return None
+
+
+def _analyze_response(text: str, final_url: str) -> dict:
+    low = re.sub(r"\s+", " ", text).lower()
+    success_matches = [h for h in SUCCESS_HINTS if h.lower() in low]
+    failure_matches = [h for h in FAILURE_HINTS if h.lower() in low]
+    cf7_detected = any(h.lower() in low for h in CF7_HINTS)
+    cf7_response = _extract_cf7_response(text)
+    fragment = urlparse(final_url).fragment
+
+    if success_matches and not failure_matches:
+        assessment = "CONFIRMED_SUCCESS_TEXT"
+    elif failure_matches:
+        assessment = "CONFIRMED_FAILURE_TEXT"
+    elif cf7_detected and fragment.startswith("wpcf7-"):
+        assessment = "CF7_NON_AJAX_RESPONSE_UNVERIFIED"
+    else:
+        assessment = "UNVERIFIED_RESPONSE"
+
+    return {
+        "assessment": assessment,
+        "cf7_detected": cf7_detected,
+        "url_fragment": fragment or None,
+        "success_matches": success_matches,
+        "failure_matches": failure_matches,
+        "cf7_response": cf7_response,
+    }
 
 
 def diagnose_submit(plan: dict) -> dict:
@@ -52,6 +102,17 @@ def diagnose_submit(plan: dict) -> dict:
         },
     )
 
+    log_item = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "campaign_id": CAMPAIGN_ID,
+        "store_id": store_id,
+        "store_name": plan.get("store_name"),
+        "form_url": form_url,
+        "action": action,
+        "request_sent": False,
+        "diagnostic": True,
+    }
+
     try:
         with urlopen(req, timeout=TIMEOUT_SECONDS) as res:
             raw = res.read(500_000)
@@ -61,38 +122,50 @@ def diagnose_submit(plan: dict) -> dict:
             except LookupError:
                 text = raw.decode("utf-8", errors="replace")
             compact = re.sub(r"\s+", " ", text).strip()
-            return {
+            final_url = res.geturl()
+            analysis = _analyze_response(text, final_url)
+            result = {
                 "decision": "DIAGNOSTIC_RESPONSE",
                 "store_id": store_id,
                 "request_sent": True,
                 "http_status": getattr(res, "status", None),
-                "final_url": res.geturl(),
+                "final_url": final_url,
                 "content_type": res.headers.get("Content-Type"),
+                **analysis,
                 "response_excerpt": compact[:1200],
             }
+            log_item.update({k: v for k, v in result.items() if k != "response_excerpt"})
+            append_submission_log(log_item)
+            return result
     except HTTPError as exc:
         try:
             body = exc.read(200_000).decode("utf-8", errors="replace")
         except Exception:
             body = ""
-        return {
+        result = {
             "decision": "DIAGNOSTIC_HTTP_ERROR",
             "store_id": store_id,
             "request_sent": True,
             "http_status": exc.code,
             "response_excerpt": re.sub(r"\s+", " ", body).strip()[:1200],
         }
+        log_item.update({k: v for k, v in result.items() if k != "response_excerpt"})
+        append_submission_log(log_item)
+        return result
     except (URLError, TimeoutError, ValueError) as exc:
-        return {
+        result = {
             "decision": "DIAGNOSTIC_TRANSPORT_FAILED",
             "store_id": store_id,
             "request_sent": False,
             "reason": type(exc).__name__,
         }
+        log_item.update(result)
+        append_submission_log(log_item)
+        return result
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Submit one explicitly confirmed form and print a response diagnostic excerpt.")
+    p = argparse.ArgumentParser(description="Submit one explicitly confirmed form and print response diagnostics.")
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
     p.add_argument("--store-id", required=True)
     p.add_argument("--live", action="store_true")
