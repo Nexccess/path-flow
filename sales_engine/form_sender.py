@@ -358,9 +358,7 @@ def run(
     live: bool = False,
     confirm_store_id: str | None = None,
 ) -> dict:
-    if live:
-        if not store_id:
-            raise SystemExit("--live requires --store-id")
+    if live and store_id:
         if confirm_store_id != store_id:
             raise SystemExit("--live requires --confirm-store-id with the same store ID")
         limit = 1
