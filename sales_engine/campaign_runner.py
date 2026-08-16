@@ -12,8 +12,8 @@ from templates import render
 
 CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
-SEND_START = time(10, 30)
-SEND_END = time(16, 30)
+SEND_START = time(10, 0)
+SEND_END = time(19, 0)
 
 EMAIL_RE = re.compile(r"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$", re.I)
 BAD_EMAIL_PARTS = (
@@ -74,7 +74,7 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
     if live and not within_send_window():
         counts["blocked_send_window"] = 1
         print(
-            "LIVE SEND BLOCKED: allowed window is weekdays 10:30-16:30 JST. "
+            "LIVE SEND BLOCKED: allowed window is weekdays 10:00-19:00 JST. "
             "No messages were sent."
         )
         conn.close()

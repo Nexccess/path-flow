@@ -2,57 +2,67 @@ from __future__ import annotations
 
 
 def subject(store_name: str, store_id: str) -> str:
-    return f"{store_name}様向けの来店前受付ページを作成しました"
+    return f"{store_name}様向けの来店前受付ページについて"
 
 
 def footer(store_id: str) -> str:
-    return f"""\n\n合同会社Nexccess\nPath-Flow\nEmail: info@nexccess.com\n\n※今後このようなご案内が不要でしたら、その旨ご返信ください。以後のご案内を停止いたします。\n管理番号: PF-{store_id}"""
+    return """
+
+――――――――――
+Nexccess
+中村景太
+
+Mail：info@nexccess.com
+――――――――――"""
 
 
 def initial_body(store_name: str, store_id: str, lp_url: str) -> str:
-    return f"""{store_name} 様
+    return f"""突然の営業連絡失礼いたします。
 
-初めまして。突然のご連絡失礼いたします。
+Nexccessの中村と申します。
 
-突然のご連絡の上に誠に勝手ながら、{store_name}様向けのWebサイトを試作してみました。
+美容サロン様向けに、
+お客様の来店前ヒアリングを簡単にする
+受付ページのサービスを提供しております。
 
-今回試作したWebサイトは、一般的な営業用サイトではなく、
-ご来店前のお客様が、ご自身の希望を簡単に整理できる
-「事前受付ページ」として作成したものです。
+{store_name}様向けにサンプルページを作成いたしました。
 
-○ 試作Webサイトはこちらです。
-↓↓↓↓
+実際のページ：
 {lp_url}
 
-ご来店前のお客様は、Webサイト上で5つの質問に回答するだけで、
-ご自身の希望を整理し、そのまま店舗様への相談・予約につなげることができます。
+来店前にお客様の希望メニューや要望を整理できるため、
+店舗様の対応負担軽減につながる仕組みです。
 
-この仕組みには生成AIを利用していますが、
-「AIを導入する」というより、Web上に受付スタッフを一人増やすイメージに近いものです。
+もしご興味がございましたら、
+詳細をご説明させていただけますと幸いです。
 
-営業資料ではなく、実際に操作できるページですので、
-よろしければ一度ご覧ください。""" + footer(store_id)
+よろしくお願いいたします。
+""" + footer(store_id)
 
 
 def followup1_body(store_name: str, store_id: str, lp_url: str) -> str:
-    return f"""{store_name} 様
+    return f"""{store_name}様
 
-先日お送りした{store_name}様向けの受付ページについて、念のため再送いたします。
+先日ご案内した来店前受付ページについて、
+念のため再度ご連絡いたしました。
 
-営業資料ではなく、実際に操作できるページです。
-お時間のある際に一度だけ触っていただければ内容をご確認いただけます。
+実際に操作できるサンプルページですので、
+お時間のある際にご確認いただけますと幸いです。
 
-{lp_url}""" + footer(store_id)
+{lp_url}
+""" + footer(store_id)
 
 
 def followup2_body(store_name: str, store_id: str, lp_url: str) -> str:
-    return f"""{store_name} 様
+    return f"""{store_name}様
 
-{store_name}様向けに作成したページについて、最後にご案内だけお送りします。
+以前ご案内した受付ページについて、
+最後のご連絡となります。
 
-現時点でご予定がなければ、ご返信は不要です。
+ご不要の場合はご返信不要です。
 
-{lp_url}""" + footer(store_id)
+{lp_url}
+""" + footer(store_id)
 
 
 def render(stage: str, store_name: str, store_id: str, lp_url: str) -> tuple[str, str]:
@@ -64,4 +74,5 @@ def render(stage: str, store_name: str, store_id: str, lp_url: str) -> tuple[str
         body = followup2_body(store_name, store_id, lp_url)
     else:
         raise ValueError(f"Unknown stage: {stage}")
+
     return subject(store_name, store_id), body
