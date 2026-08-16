@@ -53,8 +53,6 @@ def is_safe_email(value: str | None) -> bool:
 
 def within_send_window(now: datetime | None = None) -> bool:
     now = now or datetime.now(JST)
-    if now.weekday() >= 5:  # Saturday / Sunday
-        return False
     current = now.timetz().replace(tzinfo=None)
     return SEND_START <= current <= SEND_END
 
