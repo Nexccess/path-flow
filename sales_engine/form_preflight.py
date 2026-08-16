@@ -115,6 +115,11 @@ def is_third_party(url: str) -> bool:
     return any(h == host or host.endswith("." + h) for h in THIRD_PARTY_HOST_HINTS)
 
 
+def has_framework_server_action(form: dict) -> bool:
+    names = [str(f.get("name") or "") for f in form.get("fields", [])]
+    return any(name.upper().startswith("$ACTION_") for name in names)
+
+
 def inspect_form(url: str) -> dict:
     if is_third_party(url):
         return {
@@ -179,6 +184,16 @@ def inspect_form(url: str) -> dict:
         }
 
     selected = max(usable, key=lambda f: (f["has_message"], f["has_email"], f["field_count"]))
+
+    if has_framework_server_action(selected):
+        return {
+            "decision": "BLOCKED_DYNAMIC_FORM",
+            "send_allowed": False,
+            "reason": "Next.js等のServer Action形式を検出しました。通常のHTML POSTでは送信せず、専用対応または手動確認に回します。",
+            "url": final_url,
+            "selected_form": selected,
+        }
+
     action_host = urlparse(selected["action"]).netloc.lower()
     page_host = urlparse(final_url).netloc.lower()
     same_host = action_host == page_host or action_host.endswith("." + page_host) or page_host.endswith("." + action_host)
@@ -231,6 +246,7 @@ def run(db: Path, limit: int | None = None, apply: bool = False) -> dict:
                     "BLOCKED_CAPTCHA": "FORM_BLOCKED_CAPTCHA",
                     "BLOCKED_POLICY": "FORM_BLOCKED_POLICY",
                     "BLOCKED_THIRD_PARTY": "FORM_BLOCKED_THIRD_PARTY",
+                    "BLOCKED_DYNAMIC_FORM": "FORM_BLOCKED_DYNAMIC",
                     "FETCH_FAILED": "FORM_FETCH_FAILED",
                 }.get(decision, "FORM_REVIEW")
                 conn.execute(
