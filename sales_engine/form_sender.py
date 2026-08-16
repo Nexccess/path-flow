@@ -386,7 +386,7 @@ def run(
             params.append(limit)
         rows = conn.execute(sql, params).fetchall()
 
-        if live and len(rows) != 1:
+        if live and store_id and len(rows) != 1:
             raise SystemExit(f"Live test requires exactly one eligible row; found {len(rows)}")
 
         submitted = 0
