@@ -48,6 +48,8 @@ class LeadSupplyEngineTest(unittest.TestCase):
                  None, None, "https://line.me/example", None, "x"),
                 ("PF-NAIL-001", "4", "Blocked Lead", "READY_FORM", "FORM_BLOCKED_CAPTCHA", 0,
                  None, "https://example.jp/contact", None, None, "x"),
+                ("PF-NAIL-001", "5", "Pending Email", "READY_EMAIL", "REVIEW", 0,
+                 "pending@example.jp", None, None, None, "x"),
             ],
         )
         conn.commit()
@@ -58,17 +60,19 @@ class LeadSupplyEngineTest(unittest.TestCase):
 
     def test_dry_run_does_not_persist_scores(self) -> None:
         summary = run(self.db, "PF-NAIL-001", apply=False)
-        self.assertEqual(summary["targets"], 4)
+        self.assertEqual(summary["targets"], 5)
         conn = sqlite3.connect(self.db)
         rows = conn.execute("SELECT lead_priority FROM leads").fetchall()
         conn.close()
         self.assertTrue(all(row[0] is None for row in rows))
 
-    def test_apply_persists_expected_qualification(self) -> None:
+    def test_apply_persists_contactability_gate(self) -> None:
         summary = run(self.db, "PF-NAIL-001", apply=True)
+        self.assertEqual(summary["priority"]["HIGH"], 0)
         self.assertEqual(summary["priority"]["MEDIUM"], 2)
-        self.assertEqual(summary["priority"]["LOW"], 1)
+        self.assertEqual(summary["priority"]["LOW"], 2)
         self.assertEqual(summary["priority"]["EXCLUDE"], 1)
+        self.assertEqual(summary["qualification"], {"A": 2, "B": 0, "C": 2, "D": 1})
 
         conn = sqlite3.connect(self.db)
         rows = conn.execute(
@@ -78,12 +82,39 @@ class LeadSupplyEngineTest(unittest.TestCase):
         self.assertEqual(
             rows,
             [
-                ("1", "A", 60, "MEDIUM"),
-                ("2", "A", 60, "MEDIUM"),
+                ("1", "A", 50, "MEDIUM"),
+                ("2", "A", 50, "MEDIUM"),
                 ("3", "C", 25, "LOW"),
                 ("4", "D", 0, "EXCLUDE"),
+                ("5", "C", 25, "LOW"),
             ],
         )
+
+    def test_value_signals_promote_only_auto_sendable_lead(self) -> None:
+        conn = sqlite3.connect(self.db)
+        conn.execute("ALTER TABLE leads ADD COLUMN google_rating REAL")
+        conn.execute("ALTER TABLE leads ADD COLUMN google_review_count INTEGER")
+        conn.execute(
+            "UPDATE leads SET google_rating=4.9, google_review_count=100 WHERE store_id='1'"
+        )
+        conn.execute(
+            "UPDATE leads SET google_rating=5.0, google_review_count=200 WHERE store_id='3'"
+        )
+        conn.commit()
+        conn.close()
+
+        summary = run(self.db, "PF-NAIL-001", apply=True)
+        self.assertEqual(summary["priority"]["HIGH"], 1)
+
+        conn = sqlite3.connect(self.db)
+        rows = dict(
+            conn.execute(
+                "SELECT store_id, lead_priority FROM leads WHERE store_id IN ('1','3')"
+            ).fetchall()
+        )
+        conn.close()
+        self.assertEqual(rows["1"], "HIGH")
+        self.assertEqual(rows["3"], "LOW")
 
 
 if __name__ == "__main__":
