@@ -1,0 +1,42 @@
+name: Sales Engine CI
+
+on:
+  pull_request:
+    paths:
+      - 'sales_engine/**'
+      - '.github/workflows/sales-engine-ci.yml'
+  push:
+    branches:
+      - sales-engine-mvp
+      - lead-supply-engine-v1
+    paths:
+      - 'sales_engine/**'
+      - '.github/workflows/sales-engine-ci.yml'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sales_engine
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile Python sources
+        run: python -m compileall .
+
+      - name: Run Lead Supply tests
+        run: python -m unittest -v test_lead_supply_engine.py
+
+      - name: Run existing Sales Engine tests
+        run: |
+          python -m unittest -v \
+            test_response_flow.py \
+            test_agent_response_pipeline.py
