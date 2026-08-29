@@ -10,6 +10,7 @@ on:
       - sales-engine-mvp
       - lead-supply-engine-v1
       - screening-automation-v1
+      - lead-acquisition-v1
     paths:
       - 'sales_engine/**'
       - '.github/workflows/sales-engine-ci.yml'
@@ -41,6 +42,9 @@ jobs:
 
       - name: Run Screening Automation tests
         run: python -m unittest -v test_screening_automation.py
+
+      - name: Run Lead Acquisition tests
+        run: python -m unittest -v test_lead_acquisition.py
 
       - name: Run existing Sales Engine tests
         run: |
