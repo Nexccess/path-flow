@@ -21,7 +21,7 @@ EXCLUDE_SCREENING_PREFIXES = (
     "FORM_BLOCKED_THIRD_PARTY",
     "FORM_BLOCKED_DYNAMIC",
 )
-LOW_REVIEW_STATUSES = {
+MANUAL_REACHABLE_STATUSES = {
     "MANUAL_CHECK",
     "DISCOVERY_REQUIRED",
     "READY_LINE",
@@ -99,6 +99,16 @@ def qualification_grade(
     line_url: str | None,
     instagram_url: str | None,
 ) -> tuple[str, str | None]:
+    """Return the contactability gate result.
+
+    A = AUTO_SENDABLE
+    C = MANUAL_REACHABLE
+    D = EXCLUDE
+
+    Grade B is intentionally unused in v1.2. Earlier prototypes mixed
+    'requires final check' with commercial priority, which made contactability
+    and scoring ambiguous.
+    """
     excluded, reason = is_excluded(contact_status, screening_status)
     if excluded:
         return "D", reason
@@ -107,67 +117,46 @@ def qualification_grade(
     screening = (screening_status or "").upper()
     allowed = bool(send_allowed)
 
-    if allowed and email:
-        return "A", "validated_email"
-    if allowed and form_url and screening == "FORM_AUTO_READY":
-        return "A", "validated_form"
+    if allowed and contact == "READY_EMAIL" and email:
+        return "A", "auto_sendable_email"
+    if allowed and contact == "READY_FORM" and form_url and screening == "FORM_AUTO_READY":
+        return "A", "auto_sendable_form"
 
-    if contact == "READY_EMAIL" and email:
-        return "B", "email_requires_final_send_check"
-    if contact == "READY_FORM" and form_url:
-        return "B", "form_requires_final_send_check"
+    if contact in MANUAL_REACHABLE_STATUSES or line_url or instagram_url:
+        return "C", "manual_reachable"
 
-    if contact in LOW_REVIEW_STATUSES or line_url or instagram_url:
-        return "C", "reachable_but_not_auto_sendable"
+    # A discovered email/form that has not passed the automatic-send gate is
+    # still reachable, but must not be promoted into the automatic queue.
+    if (contact == "READY_EMAIL" and email) or (contact == "READY_FORM" and form_url):
+        return "C", "manual_reachable_pending_validation"
 
     return "D", "no_valid_sales_channel"
 
 
-def calculate_score(
-    grade: str,
-    email: str | None,
-    form_url: str | None,
-    line_url: str | None,
-    instagram_url: str | None,
+def calculate_auto_sendable_score(
     google_rating: float | None,
     google_review_count: int | None,
 ) -> tuple[int, str, dict[str, int]]:
-    breakdown: dict[str, int] = {}
+    """Prioritize only after a lead has passed the contactability gate.
 
-    qualification_points = {"A": 30, "B": 25, "C": 15, "D": 5}[grade]
-    breakdown["qualification"] = qualification_points
+    The v1 rule is deliberately explainable and conservative:
+      - AUTO_SENDABLE baseline: 50 points => MEDIUM
+      - Google rating >= 4.5: +10
+      - Google reviews >= 50: +10
+      - HIGH requires both value signals (70 points)
 
-    if email:
-        breakdown["email"] = 20
-    if form_url:
-        breakdown["form"] = 20
-    if line_url:
-        breakdown["line"] = 10
-    if instagram_url:
-        breakdown["instagram"] = 5
+    Contact-channel count is not used as a value signal; having more channels
+    changes reachability/redundancy, not the commercial attractiveness itself.
+    """
+    breakdown: dict[str, int] = {"auto_sendable": 50}
 
     if google_rating is not None and google_rating >= 4.5:
-        breakdown["rating"] = 10
-
-    if google_review_count is not None:
-        if google_review_count >= 100:
-            breakdown["reviews"] = 10
-        elif google_review_count >= 50:
-            breakdown["reviews"] = 5
-
-    # v1.1 timing bonus: email/form can be scheduled into the approved send windows.
-    if email or form_url:
-        breakdown["timing"] = 10
+        breakdown["rating_ge_4_5"] = 10
+    if google_review_count is not None and google_review_count >= 50:
+        breakdown["reviews_ge_50"] = 10
 
     score = sum(breakdown.values())
-    if score >= 90:
-        priority = "HOT"
-    elif score >= 70:
-        priority = "HIGH"
-    elif score >= 50:
-        priority = "MEDIUM"
-    else:
-        priority = "LOW"
+    priority = "HIGH" if score >= 70 else "MEDIUM"
     return score, priority, breakdown
 
 
@@ -191,17 +180,21 @@ def score_lead(row: sqlite3.Row) -> ScoreResult:
             score_breakdown={},
         )
 
-    score, priority, breakdown = calculate_score(
-        grade,
-        row["email"],
-        row["contact_form_url"],
-        row["line_url"],
-        row["instagram_url"],
+    if grade == "C":
+        return ScoreResult(
+            qualification_grade="C",
+            lead_score=25,
+            lead_priority="LOW",
+            exclusion_reason=reason,
+            score_breakdown={"manual_reachable": 25},
+        )
+
+    score, priority, breakdown = calculate_auto_sendable_score(
         as_float(row["google_rating"]),
         as_int(row["google_review_count"]),
     )
     return ScoreResult(
-        qualification_grade=grade,
+        qualification_grade="A",
         lead_score=score,
         lead_priority=priority,
         exclusion_reason=reason,
@@ -237,7 +230,7 @@ def run(
             params.append(limit)
 
         rows = conn.execute(sql, params).fetchall()
-        counts = {"HOT": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "EXCLUDE": 0}
+        counts = {"HIGH": 0, "MEDIUM": 0, "LOW": 0, "EXCLUDE": 0}
         grades = {"A": 0, "B": 0, "C": 0, "D": 0}
 
         for row in rows:
@@ -289,7 +282,7 @@ def run(
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Qualification + deterministic lead scoring for Nexccess Revenue Engine v1."
+        description="Contactability gate + deterministic lead prioritization for Nexccess Revenue Engine v1."
     )
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
     p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
