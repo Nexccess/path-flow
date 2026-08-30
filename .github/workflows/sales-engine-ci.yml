@@ -48,7 +48,10 @@ jobs:
         run: python -m unittest -v test_lead_discovery.py
 
       - name: Run LP Production tests
-        run: python -m unittest -v test_lp_production.py
+        run: |
+          python -m unittest -v \
+            test_lp_production.py \
+            test_campaign_deploy_gate.py
 
       - name: Run existing Sales Engine tests
         run: |
