@@ -3,6 +3,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Force the entire PowerShell <-> Python boundary to UTF-8. Windows
+# PowerShell 5.1 otherwise decodes native-process output with the legacy
+# console code page, which corrupts Japanese text when piped to Tee-Object.
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[Console]::InputEncoding = $utf8NoBom
+[Console]::OutputEncoding = $utf8NoBom
+$OutputEncoding = $utf8NoBom
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
 
