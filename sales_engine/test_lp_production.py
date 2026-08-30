@@ -122,6 +122,7 @@ class LPProductionE2ETest(unittest.TestCase):
         html = (self.output / "1" / "index.html").read_text(encoding="utf-8")
         self.assertIn("テストネイル", html)
         self.assertIn("予約につながる導線", html)
+        self.assertIn('<meta name="pathflow-lead-id" content="1">', html)
 
         conn = sqlite3.connect(self.db)
         row = conn.execute(
@@ -136,7 +137,9 @@ class LPProductionE2ETest(unittest.TestCase):
         result = lp_production.mark_deployed(
             self.db, 1, "https://preview.example.com/generated/1/"
         )
-        verify.assert_called_once()
+        verify.assert_called_once_with(
+            "https://preview.example.com/generated/1/", 1, "テストネイル"
+        )
         self.assertEqual(result["deploy_status"], "READY")
 
         conn = sqlite3.connect(self.db)
