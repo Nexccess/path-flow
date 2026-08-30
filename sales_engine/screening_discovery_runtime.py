@@ -11,6 +11,20 @@ _original_load_rows = base.load_rows
 _original_classify = base.classify
 _original_persist_decision = base.persist_decision
 
+NON_TARGET_HOST_HINTS = (
+    "beauty.rakuten.co.jp",
+    "beauty-park.jp",
+    "nailie.jp",
+    "machi-biz.com",
+    "beautifyjp.net",
+    "minimodel.jp",
+    "nailbook.jp",
+)
+
+
+def _host(url: str | None) -> str:
+    return base.host_of(url)
+
 
 def load_rows_by_source(conn: sqlite3.Connection, limit: int | None):
     if not _SOURCE:
@@ -43,6 +57,15 @@ def load_rows_by_source(conn: sqlite3.Connection, limit: int | None):
 
 def classify_discovery(row: sqlite3.Row, target_categories: set[str], target_areas: set[str]):
     if _SOURCE == "lead-discovery-v1":
+        website = row["website_url"]
+        host = _host(website)
+        if any(host == h or host.endswith("." + h) for h in NON_TARGET_HOST_HINTS):
+            return base.Decision(
+                "CLOSE",
+                "NON_TARGET_PLATFORM",
+                detail=website,
+            )
+
         try:
             confidence = row["discovery_confidence"]
         except (IndexError, KeyError):
