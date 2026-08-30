@@ -1,0 +1,140 @@
+{
+  "version": "store-intelligence-violet-yokohama-v1",
+  "lead_id": 9,
+  "identity": {
+    "lead_name": "Violet Yokohama (バイオレットヨコハマ/横浜店)",
+    "official_current_display_name": "Violet Aimée（横浜）",
+    "hotpepper_display_name": "Violet Yokohama レイヤーカット/髪質改善【バイオレット ヨコハマ】",
+    "name_status": "SOURCE_NAME_MISMATCH",
+    "rule": "Do not infer a rename or equivalence beyond the fact that both sources point to the same Yokohama / NEWoMan location."
+  },
+  "facts": [
+    {
+      "id": "location",
+      "value": "神奈川県横浜市西区南幸1-1-1 JR横浜タワーNEWoMan横浜3F",
+      "source": "Violet official",
+      "url": "https://violet.tokyo/salon/yokohama/"
+    },
+    {
+      "id": "access",
+      "value": "横浜駅直結。Hot PepperではJR線・京急線改札30秒、東横線・相鉄線改札1分と案内。",
+      "source": "Hot Pepper Beauty",
+      "url": "https://beauty.hotpepper.jp/slnH000493666/"
+    },
+    {
+      "id": "specialties",
+      "value": ["レイヤーカット", "髪質改善", "韓国系スタイル"],
+      "source": "Hot Pepper Beauty",
+      "url": "https://beauty.hotpepper.jp/slnH000493666/"
+    },
+    {
+      "id": "award",
+      "value": "Hot Pepper掲載上で『美容師版ミシュラン2026年 KAMI CHARISMA ∞受賞サロン』と表示。",
+      "source": "Hot Pepper Beauty",
+      "url": "https://beauty.hotpepper.jp/slnH000493666/"
+    },
+    {
+      "id": "official_prices",
+      "value": {
+        "cut_from": "¥6,600〜",
+        "color_from": "¥8,800〜",
+        "straight_perm_from": "¥22,000〜",
+        "treatment_from": "¥6,600〜"
+      },
+      "source": "Violet official",
+      "url": "https://violet.tokyo/salon/yokohama/"
+    },
+    {
+      "id": "space",
+      "value": "公式ロケーション案内では、オーク調の明るい木材、ブラックフレーム、間接照明、大きなガラス窓と自然光を特徴として説明。",
+      "source": "Violet official",
+      "url": "https://violet.tokyo/location/"
+    }
+  ],
+  "review_evidence": {
+    "rating_observed": 4.78,
+    "review_count_observed": "700件超",
+    "dimension_scores_observed": {
+      "雰囲気": 4.8,
+      "接客サービス": 4.8,
+      "技術・仕上がり": 4.8,
+      "メニュー・料金": 4.6
+    },
+    "audience_distribution_observed": {
+      "女性10代": 96,
+      "女性20代": 292,
+      "女性30代": 156,
+      "女性40代": 95,
+      "女性50代以上": 37,
+      "男性全年代": 40
+    },
+    "themes": [
+      {
+        "id": "consultation_alignment",
+        "label": "丁寧なヒアリングと希望イメージのすり合わせ",
+        "evidence": [
+          "ざっくりした希望でも相談しながら仕上げてもらえたという口コミ",
+          "ヒアリングが丁寧でリクエスト通りになったという口コミ",
+          "複雑でこだわりの強いカットでも理想が伝わったという口コミ"
+        ]
+      },
+      {
+        "id": "finish_satisfaction",
+        "label": "仕上がり満足",
+        "evidence": [
+          "思いどおりのスタイル",
+          "髪型・ヘアカラーへの満足",
+          "周囲から似合うと褒められたという口コミ"
+        ]
+      },
+      {
+        "id": "home_reproducibility",
+        "label": "自宅での再現を助ける説明",
+        "evidence": [
+          "セットの仕方に合わせたカット",
+          "セット方法のレクチャーが助かったという口コミ"
+        ]
+      },
+      {
+        "id": "repeat_intent",
+        "label": "再来意向",
+        "evidence": [
+          "また通いたい",
+          "次から指名したい",
+          "またお願いしたいという口コミ"
+        ]
+      }
+    ],
+    "source": "Hot Pepper Beauty",
+    "url": "https://beauty.hotpepper.jp/slnH000493666/review/"
+  },
+  "brand_evidence": [
+    {
+      "id": "concept",
+      "value": "Violet公式の横浜店開業時コンセプトでは、美容を通じて『なりたい』『やりたい』を後押しする趣旨を掲げている。",
+      "source": "Violet official",
+      "url": "https://violet.tokyo/magazine/14410/"
+    }
+  ],
+  "inferences": [
+    {
+      "id": "message_opportunity",
+      "value": "Customer Voiceの『うまく希望を伝えられない不安』と、店舗Evidenceの『丁寧なヒアリング・イメージ再現』は接続候補になり得る。ただし『必ず叶う』などの断定は禁止。"
+    },
+    {
+      "id": "reproducibility_opportunity",
+      "value": "Customer Voiceの『自宅で再現できるか』と、セット方法レクチャーの口コミEvidenceは接続候補。"
+    }
+  ],
+  "unknown": [
+    "公式サイトの『Violet Aimée（横浜）』とHot Pepperの『Violet Yokohama』の名称差が正式な改称かどうかは未確認。",
+    "Google口コミの最新総件数・評価は今回の確定Evidenceには使用していない。",
+    "各口コミテーマが全スタイリストに一様に当てはまるとは限らない。"
+  ],
+  "copy_rules": [
+    "店舗FactとCustomer Voiceを混同しない。",
+    "口コミは個人の感想であり、店舗全体への絶対保証として表現しない。",
+    "『丁寧に相談しやすい』『希望をすり合わせる評価が見られる』程度の表現を優先する。",
+    "価格・受賞・評価数など変動する情報は必要な場合のみ使用し、過度に主訴求化しない。"
+  ]
+}
