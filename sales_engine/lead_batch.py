@@ -10,6 +10,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_TARGETS = HERE / "lead_batch_targets.json"
+DEFAULT_REPORT_DIR = HERE / "logs" / "lead_batch"
 
 
 def load_targets(path: Path) -> list[dict]:
@@ -72,9 +73,6 @@ def run_target(index: int, total: int, item: dict, batch_id: str, db: Path | Non
     print(f"campaign: {campaign_id}")
     print("#" * 72, flush=True)
 
-    # Windows consoles often default child Python stdout to CP932. Force the
-    # whole child process tree (pipeline -> discovery/screening) to UTF-8 so
-    # Japanese area/category names and unattended logs remain readable.
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
@@ -111,10 +109,21 @@ def run_target(index: int, total: int, item: dict, batch_id: str, db: Path | Non
     return result
 
 
+def save_report(report_dir: Path, batch_id: str, report: dict) -> tuple[Path, Path]:
+    report_dir.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
+    history_path = report_dir / f"{batch_id}.json"
+    latest_path = report_dir / "latest.json"
+    history_path.write_text(payload, encoding="utf-8")
+    latest_path.write_text(payload, encoding="utf-8")
+    return history_path, latest_path
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Run Nexccess Lead Pipeline for multiple area/category targets.")
     p.add_argument("--targets", type=Path, default=DEFAULT_TARGETS)
     p.add_argument("--db", type=Path)
+    p.add_argument("--report-dir", type=Path, default=DEFAULT_REPORT_DIR)
     args = p.parse_args()
 
     targets_path = args.targets.resolve()
@@ -150,11 +159,16 @@ def main() -> None:
 
     report = {
         "batch_id": batch_id,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
         "totals": totals,
         "results": results,
     }
+    history_path, latest_path = save_report(args.report_dir.resolve(), batch_id, report)
+
     print("\n=== BATCH RESULT ===")
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(f"\nreport : {history_path}")
+    print(f"latest : {latest_path}")
 
     if totals["failed"]:
         raise SystemExit(1)
