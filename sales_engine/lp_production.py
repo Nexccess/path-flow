@@ -16,6 +16,7 @@ DEFAULT_TEMPLATE = REPO_ROOT / "index.html"
 DEFAULT_OUTPUT = REPO_ROOT / "generated"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "qwen2.5:7b"
+CUSTOMER_VOICE_DIR = HERE / "customer_voice"
 VERSION = "lp-production-e2e-v1"
 
 
@@ -103,6 +104,23 @@ def load_go_lead(conn: sqlite3.Connection, lead_id: int | None = None) -> dict:
     return item
 
 
+def load_customer_voice(lead: dict) -> dict:
+    category = " ".join(
+        filter(
+            None,
+            [
+                clean(lead.get("category")),
+                clean((lead.get("intelligence") or {}).get("business_type")),
+            ],
+        )
+    )
+    if any(term in category for term in ("美容室", "美容院", "ヘアサロン", "hair")):
+        path = CUSTOMER_VOICE_DIR / "hair_salon.json"
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    return {}
+
+
 def fallback_copy(lead: dict) -> dict:
     intel = lead["intelligence"]
     company = clean(intel.get("company_name")) or clean(lead.get("company_name")) or "この店舗"
@@ -112,23 +130,39 @@ def fallback_copy(lead: dict) -> dict:
     opportunities = intel.get("lp_opportunities") or []
     strength = clean(strengths[0]) if strengths else None
     opportunity = clean(opportunities[0]) if opportunities else None
+    voice = load_customer_voice(lead)
     return {
         "eyebrow": f"{company}様向け Path-Flow診断",
-        "headline": f"{company}の魅力を、来店につながる導線へ。",
+        "headline": f"{company}の魅力を、来店前の不安まで含めて伝える。",
         "subheadline": (
-            f"{area}の{business}としての強みを活かし、問い合わせ・予約までの流れを"
-            "分かりやすく整える個別提案です。"
+            f"{area}の{business}としての強みと、実際の顧客が来店前に迷いやすい点を"
+            "分けて整理した個別提案です。"
         ),
-        "diagnosis": opportunity or "現在のWeb導線を整理し、見込み客が次の行動を選びやすい構成へ改善する余地があります。",
-        "strength": strength or "公開情報から確認できる店舗独自の特徴を訴求軸として活用します。",
+        "diagnosis": opportunity or "店舗の公開情報と顧客側の迷いを分けて整理し、相談・予約前の不安を減らす余地があります。",
+        "strength": strength or "公開情報から確認できる店舗独自の特徴だけを訴求軸として扱います。",
+        "diagnostic_questions": voice.get("defaultQuestions", []),
+        "customer_voice_version": voice.get("version"),
     }
 
 
 def generate_copy(lead: dict, ollama_url: str, model: str) -> dict:
     intel = lead["intelligence"]
+    customer_voice = load_customer_voice(lead)
     prompt = f"""You write concise Japanese landing-page copy for Path-Flow.
-Return JSON only. Never invent facts. Use only the supplied lead intelligence.
-Required keys: eyebrow, headline, subheadline, diagnosis, strength.
+Return JSON only. Never invent facts.
+
+Strict source separation:
+- FACT: supplied lead intelligence and verified store information only.
+- CUSTOMER_VOICE: common anxieties/decision criteria from the supplied taxonomy. Never present these as facts about this store.
+- INFERENCE: allowed only when explicitly phrased as a possible fit or consideration.
+- UNKNOWN: do not fill with guesses.
+
+Required keys:
+eyebrow, headline, subheadline, diagnosis, strength, diagnostic_questions, customer_voice_version.
+
+diagnostic_questions must contain 3 to 5 questions selected/adapted from CUSTOMER_VOICE.
+Do not claim the store solves a customer anxiety unless store FACT supports that claim.
+
 Lead:
 {json.dumps({
     "company_name": lead.get("company_name"),
@@ -137,6 +171,9 @@ Lead:
     "website_url": lead.get("website_url"),
     "intelligence": intel,
 }, ensure_ascii=False)}
+
+CUSTOMER_VOICE:
+{json.dumps(customer_voice, ensure_ascii=False)}
 """
     try:
         res = requests.post(
@@ -155,6 +192,9 @@ Lead:
         required = {"eyebrow","headline","subheadline","diagnosis","strength"}
         if not isinstance(data, dict) or not required.issubset(data):
             raise ValueError("Incomplete Ollama LP copy")
+        if not isinstance(data.get("diagnostic_questions"), list):
+            data["diagnostic_questions"] = customer_voice.get("defaultQuestions", [])
+        data["customer_voice_version"] = customer_voice.get("version")
         return data
     except Exception:
         return fallback_copy(lead)
@@ -194,12 +234,34 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
         1,
     )
 
+    questions = copy.get("diagnostic_questions") or []
+    question_html = ""
+    if questions:
+        items = []
+        for idx, q in enumerate(questions[:5], 1):
+            text = html.escape(str(q.get("text") or q.get("label") or ""))
+            options = q.get("options") or []
+            option_text = " / ".join(html.escape(str(x)) for x in options[:5])
+            items.append(
+                f'<div style="padding:1rem 0;border-top:1px solid rgba(127,127,127,.22)">'
+                f'<strong>Q{idx}. {text}</strong>'
+                f'<p style="margin:.45rem 0 0;color:var(--muted)">{option_text}</p></div>'
+            )
+        question_html = (
+            '<div style="margin-top:1.5rem">'
+            '<div class="section-label">CUSTOMER VOICE DIAGNOSIS</div>'
+            '<p style="max-width:760px;color:var(--muted)">'
+            '一般顧客が来店前に迷いやすい論点を、店舗の事実情報とは分離して質問化しています。'
+            '</p>' + "".join(items) + '</div>'
+        )
+
     marker = "</section>\n\n<!-- ─── PAIN"
     personalized = f"""
   <div class="section-inner" style="margin-top:2rem;padding-bottom:1rem">
     <div class="section-label">PERSONALIZED DIAGNOSIS</div>
     <p style="max-width:760px;color:var(--muted)">{html.escape(str(copy["diagnosis"]))}</p>
     <p style="max-width:760px;margin-top:.75rem">{html.escape(str(copy["strength"]))}</p>
+    {question_html}
   </div>
 </section>
 
