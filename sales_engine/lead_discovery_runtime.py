@@ -9,6 +9,25 @@ from screening_automation import is_portal, looks_booking_only, valid_email
 # Match the model actually installed on the local Nexccess Ollama host.
 base.DEFAULT_MODEL = "hf.co/Qwen/Qwen2.5-7B-Instruct-GGUF:latest"
 
+# Deterministic exclusions for obvious directory/marketplace sources. These are
+# useful discovery references, but are not the store/company targets we want to
+# enqueue for Path-Flow sales.
+base.BLOCKED_HOST_HINTS = base.BLOCKED_HOST_HINTS + (
+    "beauty.rakuten.co.jp",
+    "beauty-park.jp",
+    "nailie.jp",
+    "machi-biz.com",
+    "beautifyjp.net",
+    "minimodel.jp",
+    "nailbook.jp",
+)
+
+# Do not mistake recruiting, school/college, document-request, or reservation
+# routes for a business sales-contact route.
+base.NEGATIVE_CONTACT_HINTS = base.NEGATIVE_CONTACT_HINTS + (
+    "career", "job", "college", "school", "request", "資料請求", "スクール", "学校",
+)
+
 
 # --- Runtime web enrichment -------------------------------------------------
 # v1 only read the first page. For sales contactability, follow a few same-host
@@ -18,6 +37,11 @@ _original_fetch_page = base.fetch_page
 
 def _contact_link_score(url: str) -> int:
     low = (url or "").lower()
+    if any(k in low for k in (
+        "recruit", "career", "job", "求人", "採用", "college", "school", "request",
+        "資料請求", "reserve", "reservation", "booking", "予約",
+    )):
+        return 0
     if any(k in low for k in ("contact", "inquiry", "otoiawase", "toiawase")):
         return 100
     if any(k in low for k in ("company", "corporate", "about", "profile")):
@@ -131,6 +155,13 @@ def insert_lead_compatible(
     form_url = base.clean(intel.get("contact_form_url")) or page.contact_form_url
     if form_url and (is_portal(form_url) or looks_booking_only(form_url)):
         form_url = page.contact_form_url
+    if form_url:
+        low_form = form_url.lower()
+        if any(k in low_form for k in (
+            "recruit", "career", "job", "college", "school", "request", "reserve",
+            "reservation", "booking",
+        )):
+            form_url = None
 
     phone = base.clean(intel.get("phone"))
     source_area = base.clean(intel.get("area")) or area
