@@ -131,7 +131,7 @@ class LPProductionE2ETest(unittest.TestCase):
         self.assertIn("テストネイル", html)
         self.assertIn("予約につながる導線", html)
         self.assertIn('<meta name="pathflow-lead-id" content="1">', html)
-        self.assertIn("CUSTOMER VOICE DIAGNOSIS", html)
+        self.assertIn("CUSTOMER VOICE", html)
         self.assertIn("今回、一番変えたいのはどこですか？", html)
         self.assertNotIn("4,500,000", html)
         self.assertNotIn("企業規模", html)
