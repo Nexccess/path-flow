@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS leads (
   phone TEXT,
   store_url TEXT,
   lp_url TEXT,
+  deploy_status TEXT,
   contact_status TEXT NOT NULL DEFAULT 'PENDING',
   primary_channel TEXT,
   email TEXT,
