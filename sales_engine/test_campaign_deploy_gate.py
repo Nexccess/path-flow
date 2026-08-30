@@ -41,7 +41,7 @@ class CampaignDeployGateTest(unittest.TestCase):
         ]
         vals = [
             campaign_runner.CAMPAIGN_ID,"STORE-1","テストネイル",lp_url,
-            "owner@example.jp","READY_EMAIL",1,0,"READY",None,None,None
+            "owner@test-nail.jp","READY_EMAIL",1,0,"READY",None,None,None
         ]
         if with_deploy_status:
             cols.append("deploy_status")
