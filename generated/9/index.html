@@ -709,6 +709,92 @@ footer {
   .booking-grid { grid-template-columns: 1fr; }
 }
 </style>
+
+<style id="pathflow-visual-direction">
+:root {
+  --navy: #F5F1EA;
+  --navy-mid: #FFFDFC;
+  --navy-light: #ECE5DA;
+  --gold: #6D5B8C;
+  --gold-dim: #CFC5B8;
+  --gold-light: #D8CFE7;
+  --white: #211F1C;
+  --muted: #746E67;
+  --border: rgba(33,31,28,.14);
+  --glass: rgba(255,253,252,.88);
+  --crimson: #6D5B8C;
+}
+body {
+  background: var(--navy);
+  color: var(--white);
+}
+body::before { opacity: .18; }
+nav.scrolled {
+  background: rgba(255,253,252,.9);
+  backdrop-filter: blur(18px);
+}
+.nav-logo, .nav-logo-mark, .section-label { color: var(--gold); }
+.nav-logo-mark { border-color: var(--gold-dim); }
+#hero {
+  min-height: 82vh;
+  background: linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 56%,#ECE5DA 100%);
+}
+.hero-bg {
+  background:
+    radial-gradient(ellipse 45% 55% at 78% 30%, rgba(109,91,140,.10) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 65% at 20% 85%, rgba(207,197,184,.32) 0%, transparent 70%),
+    linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 100%);
+}
+.hero-grid { opacity: .12; }
+.hero-title { max-width: 780px; letter-spacing: -.02em; }
+.hero-sub { max-width: 650px; color: var(--muted); }
+.btn-primary {
+  background: var(--black-frame, #1C1B1A);
+  color: #FFFDFC;
+  border-radius: 999px;
+  padding-inline: 1.6rem;
+}
+.btn-primary:hover { background: #2A2825; }
+.btn-secondary, .nav-links a { color: #5F5953; }
+.nav-cta {
+  border-color: #1C1B1A;
+  color: #1C1B1A;
+  border-radius: 999px;
+}
+.nav-cta:hover { background:#1C1B1A; color:#FFFDFC; }
+#personalized, #customer-voice {
+  padding: clamp(72px, 9vw, 120px) 0;
+}
+#personalized { background:#FFFDFC; }
+#customer-voice { background:#F5F1EA; }
+#customer-voice .pain-grid {
+  gap: 1rem;
+  border: 0;
+}
+#customer-voice .pain-card {
+  background:#FFFDFC;
+  border:1px solid rgba(33,31,28,.10);
+  border-radius:16px;
+  box-shadow:0 18px 50px rgba(33,31,28,.06);
+}
+#customer-voice .pain-num {
+  font-size:.72rem;
+  color:#8C7FA8;
+  margin-bottom:.9rem;
+  letter-spacing:.16em;
+}
+#customer-voice .pain-title {
+  font-family: var(--font-serif);
+  font-size:1.08rem;
+  line-height:1.65;
+}
+footer {
+  background:#1C1B1A;
+  color:#F5F1EA;
+}
+.footer-copy { color:#CFC5B8; }
+</style>
+
 </head>
 <body>
 
@@ -727,7 +813,7 @@ footer {
   <div class="hero-bg">
     <div class="hero-grid"></div>
   </div>
-  <div class="hero-eyebrow">Violet Yokohama (バイオレットヨコハマ/横浜店)様向け Path-Flow診断</div>
+  <div class="hero-eyebrow">VIOLET YOKOHAMA / PATH-FLOW PERSONALIZED</div>
   <h1 class="hero-title">
     Violet Yokohama (バイオレットヨコハマ/横浜店)の魅力を、来店前の不安まで含めて伝える。
   </h1>
