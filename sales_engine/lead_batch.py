@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime
@@ -71,9 +72,17 @@ def run_target(index: int, total: int, item: dict, batch_id: str, db: Path | Non
     print(f"campaign: {campaign_id}")
     print("#" * 72, flush=True)
 
+    # Windows consoles often default child Python stdout to CP932. Force the
+    # whole child process tree (pipeline -> discovery/screening) to UTF-8 so
+    # Japanese area/category names and unattended logs remain readable.
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
+
     proc = subprocess.Popen(
         cmd,
         cwd=HERE,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
