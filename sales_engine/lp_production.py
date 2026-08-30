@@ -19,6 +19,7 @@ DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "qwen2.5:7b"
 CUSTOMER_VOICE_DIR = HERE / "customer_voice"
 STORE_INTELLIGENCE_DIR = HERE / "store_intelligence"
+MESSAGE_STRATEGY_DIR = HERE / "message_strategy"
 VERSION = "lp-production-e2e-v1"
 
 
@@ -113,6 +114,13 @@ def load_store_intelligence(lead: dict) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_message_strategy(lead: dict) -> dict:
+    path = MESSAGE_STRATEGY_DIR / f"lead_{int(lead['lead_id'])}.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def load_customer_voice(lead: dict) -> dict:
     category = " ".join(
         filter(
@@ -157,6 +165,7 @@ def fallback_copy(lead: dict) -> dict:
 def generate_copy(lead: dict, ollama_url: str, model: str) -> dict:
     intel = lead["intelligence"]
     store_intelligence = load_store_intelligence(lead)
+    message_strategy = load_message_strategy(lead)
     customer_voice = load_customer_voice(lead)
     prompt = f"""You write concise Japanese landing-page copy for Path-Flow.
 Return JSON only. Never invent facts.
@@ -185,6 +194,9 @@ Lead:
 
 STORE_INTELLIGENCE:
 {json.dumps(store_intelligence, ensure_ascii=False)}
+
+MESSAGE_STRATEGY:
+{json.dumps(message_strategy, ensure_ascii=False)}
 
 CUSTOMER_VOICE:
 {json.dumps(customer_voice, ensure_ascii=False)}
