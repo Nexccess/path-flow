@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -200,6 +201,124 @@ CUSTOMER_VOICE:
         return fallback_copy(lead)
 
 
+
+def build_customer_voice_section(copy: dict) -> str:
+    questions = copy.get("diagnostic_questions") or []
+    if not questions:
+        raise RuntimeError("Customer Voice questions are required for product-quality LP generation.")
+
+    items = []
+    for idx, q in enumerate(questions[:5], 1):
+        text = html.escape(str(q.get("text") or q.get("label") or ""))
+        options = q.get("options") or []
+        option_text = " / ".join(html.escape(str(x)) for x in options[:5])
+        items.append(
+            '<article class="pain-card">'
+            f'<div class="pain-num">{idx:02d}</div>'
+            f'<div class="pain-title">{text}</div>'
+            f'<p class="pain-desc">{option_text}</p>'
+            '</article>'
+        )
+
+    return f"""
+<section id="personalized">
+  <div class="section-inner">
+    <div class="section-label">STORE-SPECIFIC DIRECTION</div>
+    <h2 class="section-title">この店舗の情報を起点に、<em>来店前の迷い</em>まで整理する。</h2>
+    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
+      {html.escape(str(copy["diagnosis"]))}
+    </p>
+    <p style="max-width:820px;margin-top:.75rem">
+      {html.escape(str(copy["strength"]))}
+    </p>
+  </div>
+</section>
+
+<section id="customer-voice">
+  <div class="section-inner">
+    <div class="section-label">CUSTOMER VOICE</div>
+    <h2 class="section-title">美容室を選ぶ前に、<em>何を確認したいか。</em></h2>
+    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
+      以下は店舗の口コミ事実ではなく、美容室利用者が来店前に迷いやすい論点を整理した質問です。
+      店舗固有の強みと混同せず、診断入力として扱います。
+    </p>
+    <div class="pain-grid" style="margin-top:2.5rem">
+      {"".join(items)}
+    </div>
+  </div>
+</section>
+"""
+
+
+def remove_legacy_b2b(rendered: str, customer_voice_html: str) -> str:
+    # Replace everything after HERO through the old footer with the
+    # product-quality customer-facing sections. This intentionally removes
+    # the legacy B2B SaaS pain/solution/features/pricing/ROI blocks.
+    start = re.search(r'<!--\s*─+\s*PAIN.*?-->', rendered, flags=re.S)
+    footer = re.search(r'<!--\s*─+\s*FOOTER.*?-->', rendered, flags=re.S)
+    if not start or not footer or footer.start() <= start.start():
+        raise RuntimeError("Legacy B2B section boundaries could not be identified.")
+    rendered = rendered[:start.start()] + customer_voice_html + "\n\n" + rendered[footer.start():]
+
+    # Remove the old company-fit diagnosis overlay and its script completely.
+    overlay = re.search(
+        r'<!--\s*═+\s*DIAGNOSIS OVERLAY.*?</div><!-- /#diag-overlay -->',
+        rendered,
+        flags=re.S,
+    )
+    if overlay:
+        rendered = rendered[:overlay.start()] + rendered[overlay.end():]
+    rendered = re.sub(r'<script>.*?</script>', '', rendered, flags=re.S)
+
+    # Replace old B2B navigation / hero actions / stats.
+    rendered = re.sub(
+        r'<div class="nav-links">.*?</div>',
+        '<div class="nav-links"><a href="#personalized">店舗別提案</a><a href="#customer-voice">来店前診断</a></div>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<button class="nav-cta".*?</button>',
+        '<a class="nav-cta" href="#customer-voice">来店前の希望を整理する</a>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<div class="hero-actions">.*?</div>',
+        '<div class="hero-actions">'
+        '<a class="btn-primary" href="#customer-voice">来店前の希望を整理する</a>'
+        '<a href="#personalized" class="btn-secondary">この店舗向け提案を見る <span class="btn-arrow">→</span></a>'
+        '</div>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<div class="hero-stats">.*?</div>\s*<div class="hero-scroll-hint">',
+        '<div class="hero-stats">'
+        '<div><div class="hero-stat-num">5</div><div class="hero-stat-label">来店前に整理する質問</div></div>'
+        '<div><div class="hero-stat-num">VOICE</div><div class="hero-stat-label">顧客の迷いを分離して反映</div></div>'
+        '<div><div class="hero-stat-num">STORE</div><div class="hero-stat-label">店舗固有情報を優先</div></div>'
+        '</div><div class="hero-scroll-hint">',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+
+    # Footer must not present the removed enterprise SaaS offer.
+    rendered = re.sub(
+        r'<footer>.*?</footer>',
+        '<footer><div class="footer-logo">Path-Flow</div>'
+        '<p class="footer-copy">店舗ごとの公開情報と顧客側の来店前ニーズを分離して構成した個別提案ページです。</p></footer>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    return rendered
+
+
 def render_html(template: str, lead: dict, copy: dict) -> str:
     company = clean(lead["intelligence"].get("company_name")) or clean(lead.get("company_name")) or "店舗"
     title = f"{company}様向け Path-Flow 個別提案 | Nexccess"
@@ -234,40 +353,21 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
         1,
     )
 
-    questions = copy.get("diagnostic_questions") or []
-    question_html = ""
-    if questions:
-        items = []
-        for idx, q in enumerate(questions[:5], 1):
-            text = html.escape(str(q.get("text") or q.get("label") or ""))
-            options = q.get("options") or []
-            option_text = " / ".join(html.escape(str(x)) for x in options[:5])
-            items.append(
-                f'<div style="padding:1rem 0;border-top:1px solid rgba(127,127,127,.22)">'
-                f'<strong>Q{idx}. {text}</strong>'
-                f'<p style="margin:.45rem 0 0;color:var(--muted)">{option_text}</p></div>'
-            )
-        question_html = (
-            '<div style="margin-top:1.5rem">'
-            '<div class="section-label">CUSTOMER VOICE DIAGNOSIS</div>'
-            '<p style="max-width:760px;color:var(--muted)">'
-            '一般顧客が来店前に迷いやすい論点を、店舗の事実情報とは分離して質問化しています。'
-            '</p>' + "".join(items) + '</div>'
-        )
+    customer_voice_html = build_customer_voice_section(copy)
+    rendered = remove_legacy_b2b(rendered, customer_voice_html)
 
-    marker = "</section>\n\n<!-- ─── PAIN"
-    personalized = f"""
-  <div class="section-inner" style="margin-top:2rem;padding-bottom:1rem">
-    <div class="section-label">PERSONALIZED DIAGNOSIS</div>
-    <p style="max-width:760px;color:var(--muted)">{html.escape(str(copy["diagnosis"]))}</p>
-    <p style="max-width:760px;margin-top:.75rem">{html.escape(str(copy["strength"]))}</p>
-    {question_html}
-  </div>
-</section>
-
-<!-- ─── PAIN"""
-    if marker in rendered:
-        rendered = rendered.replace(marker, personalized, 1)
+    # Product-quality guardrails: legacy B2B strings must not survive.
+    forbidden = [
+        "4,500,000",
+        "ROI ESTIMATE",
+        "適合スコア",
+        "企業規模",
+        "導入検討時期",
+        "集客から予約確定まで、",
+    ]
+    leaked = [term for term in forbidden if term in rendered]
+    if leaked:
+        raise RuntimeError("Legacy B2B content remains: " + ", ".join(leaked))
 
     return rendered
 
