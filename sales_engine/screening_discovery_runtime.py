@@ -7,6 +7,7 @@ import sys
 import screening_automation as base
 
 _SOURCE: str | None = None
+_MIN_LEAD_ID: int | None = None
 _original_load_rows = base.load_rows
 _original_classify = base.classify
 _original_persist_decision = base.persist_decision
@@ -46,9 +47,12 @@ def load_rows_by_source(conn: sqlite3.Connection, limit: int | None):
         FROM leads l
         LEFT JOIN lead_discovery_intelligence i ON i.lead_id = l.lead_id
         WHERE l.source = ?
-        ORDER BY l.lead_id
     """
     params: list[object] = [_SOURCE]
+    if _MIN_LEAD_ID is not None:
+        sql += " AND l.lead_id >= ?"
+        params.append(_MIN_LEAD_ID)
+    sql += " ORDER BY l.lead_id"
     if limit:
         sql += " LIMIT ?"
         params.append(limit)
@@ -60,11 +64,7 @@ def classify_discovery(row: sqlite3.Row, target_categories: set[str], target_are
         website = row["website_url"]
         host = _host(website)
         if any(host == h or host.endswith("." + h) for h in NON_TARGET_HOST_HINTS):
-            return base.Decision(
-                "CLOSE",
-                "NON_TARGET_PLATFORM",
-                detail=website,
-            )
+            return base.Decision("CLOSE", "NON_TARGET_PLATFORM", detail=website)
 
         try:
             confidence = row["discovery_confidence"]
@@ -94,12 +94,14 @@ def persist_discovery_decision(
 
 
 def main() -> None:
-    global _SOURCE
+    global _SOURCE, _MIN_LEAD_ID
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--source")
+    parser.add_argument("--min-lead-id", type=int)
     known, remaining = parser.parse_known_args()
     _SOURCE = known.source
+    _MIN_LEAD_ID = known.min_lead_id
 
     base.load_rows = load_rows_by_source
     base.classify = classify_discovery
