@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Violet Yokohama (バイオレットヨコハマ/横浜店)様向け Path-Flow 個別提案 | Nexccess</title>
+<meta name="pathflow-lead-id" content="9">
+<meta name="pathflow-company" content="Violet Yokohama (バイオレットヨコハマ/横浜店)">
+<meta name="description" content="横浜駅の美容室としての強みを活かし、問い合わせ・予約までの流れを分かりやすく整える個別提案です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --navy:       #06101f;
+  --navy-mid:   #0d1e35;
+  --navy-light: #162844;
+  --gold:       #c8a45a;
+  --gold-dim:   #8b6e37;
+  --gold-light: #e8c97a;
+  --white:      #f4f0e8;
+  --muted:      #8a9ab5;
+  --border:     rgba(200,164,90,.18);
+  --glass:      rgba(13,30,53,.72);
+  --crimson:    #8b2635;
+
+  --font-serif: 'Noto Serif JP', serif;
+  --font-sans:  'DM Sans', sans-serif;
+  --font-mono:  'Space Mono', monospace;
+
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-in:  cubic-bezier(.7,0,.84,0);
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+/* ─── NOISE OVERLAY ───────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 3rem;
+  transition: background .4s, backdrop-filter .4s, border-color .4s;
+  border-bottom: 1px solid transparent;
+}
+nav.scrolled {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-color: var(--border);
+}
+.nav-logo {
+  font-family: var(--font-serif);
+  font-size: .95rem;
+  letter-spacing: .08em;
+  color: var(--gold);
+  display: flex; align-items: center; gap: .75rem;
+}
+.nav-logo-mark {
+  width: 28px; height: 28px;
+  border: 1.5px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-family: var(--font-mono); color: var(--gold);
+}
+.nav-links { display: flex; gap: 2.5rem; align-items: center; }
+.nav-links a {
+  font-size: .82rem; letter-spacing: .05em; color: var(--muted);
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-cta {
+  font-size: .8rem; font-weight: 500; letter-spacing: .08em;
+  padding: .55rem 1.4rem;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  transition: background .2s, color .2s;
+}
+.nav-cta:hover { background: var(--gold); color: var(--navy); }
+
+/* ─── HERO ────────────────────────────────────────────────── */
+#hero {
+  position: relative; min-height: 100vh;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
+  padding: 8rem 3rem 5rem;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(200,164,90,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(139,38,53,.08) 0%, transparent 60%),
+    linear-gradient(160deg, #06101f 0%, #0a1828 100%);
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,164,90,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,164,90,.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 60% 50%, black 30%, transparent 80%);
+}
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: .72rem; letter-spacing: .2em;
+  color: var(--gold); margin-bottom: 1.5rem;
+  opacity: 0; animation: fadeUp .8s var(--ease-out) .2s forwards;
+}
+.hero-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 700; line-height: 1.25;
+  max-width: 720px;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .35s forwards;
+}
+.hero-title em {
+  font-style: normal; color: var(--gold);
+  display: block;
+}
+.hero-sub {
+  margin-top: 1.5rem; max-width: 520px;
+  font-size: 1rem; color: var(--muted); line-height: 1.8;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .5s forwards;
+}
+.hero-actions {
+  margin-top: 2.5rem; display: flex; gap: 1rem; align-items: center;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .65s forwards;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: var(--gold); color: var(--navy);
+  font-size: .88rem; font-weight: 600; letter-spacing: .06em;
+  padding: .85rem 2rem;
+  transition: background .2s, transform .2s;
+}
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+.btn-secondary {
+  font-size: .85rem; color: var(--muted); letter-spacing: .05em;
+  display: flex; align-items: center; gap: .4rem;
+  transition: color .2s;
+}
+.btn-secondary:hover { color: var(--white); }
+.btn-arrow { font-size: 1.1em; transition: transform .2s; }
+.btn-secondary:hover .btn-arrow { transform: translateX(4px); }
+.hero-stats {
+  position: absolute; right: 3rem; bottom: 4rem;
+  display: flex; gap: 3rem;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .8s forwards;
+}
+.hero-stat-num {
+  font-family: var(--font-serif); font-size: 2.4rem; font-weight: 700;
+  color: var(--gold); line-height: 1;
+}
+.hero-stat-label {
+  font-size: .72rem; color: var(--muted); letter-spacing: .05em; margin-top: .3rem;
+}
+.hero-scroll-hint {
+  position: absolute; bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+  font-size: .68rem; letter-spacing: .15em; color: var(--muted);
+  opacity: 0; animation: fadeIn 1s .ease-out 1.2s forwards;
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(var(--gold), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+/* ─── SECTIONS ────────────────────────────────────────────── */
+section { position: relative; z-index: 1; }
+.section-inner { max-width: 1200px; margin: 0 auto; padding: 0 3rem; }
+.section-label {
+  font-family: var(--font-mono);
+  font-size: .7rem; letter-spacing: .2em; color: var(--gold);
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-weight: 700; line-height: 1.3;
+}
+.section-title em { font-style: normal; color: var(--gold); }
+
+/* ─── PAIN ────────────────────────────────────────────────── */
+#pain {
+  padding: 8rem 0;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-mid) 100%);
+}
+.pain-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1.5px; margin-top: 4rem;
+  border: 1.5px solid var(--border);
+}
+.pain-card {
+  background: var(--navy-mid); padding: 2.5rem;
+  transition: background .3s;
+}
+.pain-card:hover { background: var(--navy-light); }
+.pain-num {
+  font-family: var(--font-mono); font-size: 2.5rem;
+  color: rgba(200,164,90,.12); font-weight: 700; line-height: 1;
+  margin-bottom: 1.5rem;
+}
+.pain-title { font-size: 1.05rem; font-weight: 600; margin-bottom: .75rem; }
+.pain-desc { font-size: .88rem; color: var(--muted); line-height: 1.8; }
+
+/* ─── SOLUTION ────────────────────────────────────────────── */
+#solution {
+  padding: 8rem 0;
+}
+.solution-layout {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 6rem; align-items: center; margin-top: 4rem;
+}
+.solution-visual {
+  position: relative; aspect-ratio: 1;
+  border: 1px solid var(--border);
+  background: var(--navy-mid);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.solution-visual::before {
+  content: '';
+  position: absolute; inset: -50%;
+  background: conic-gradient(from 0deg, transparent, rgba(200,164,90,.06), transparent, transparent);
+  animation: rotate 12s linear infinite;
+}
+.sol-center {
+  position: relative; z-index: 1;
+  text-align: center;
+}
+.sol-center-label {
+  font-family: var(--font-mono); font-size: .7rem;
+  letter-spacing: .15em; color: var(--gold); margin-bottom: .5rem;
+}
+.sol-center-big {
+  font-family: var(--font-serif); font-size: 3rem; font-weight: 700;
+  line-height: 1; color: var(--white);
+}
+.sol-orb {
+  position: absolute;
+  width: 60px; height: 60px;
+  border: 1px solid var(--border);
+  background: var(--navy-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; letter-spacing: .05em; color: var(--gold);
+  text-align: center; font-family: var(--font-mono);
+}
+.sol-orb:nth-child(1) { top: 12%; left: 8%; }
+.sol-orb:nth-child(2) { top: 8%;  right: 8%; }
+.sol-orb:nth-child(3) { bottom: 10%; left: 6%; }
+.sol-orb:nth-child(4) { bottom: 8%; right: 8%; }
+.sol-orb:nth-child(5) { top: 50%; left: 2%; transform: translateY(-50%); }
+.sol-orb:nth-child(6) { top: 50%; right: 2%; transform: translateY(-50%); }
+.solution-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.sol-item {
+  display: flex; gap: 1.25rem; align-items: flex-start;
+  padding: 1.5rem;
+  border: 1px solid transparent;
+  transition: border-color .3s, background .3s;
+}
+.sol-item:hover { border-color: var(--border); background: var(--navy-mid); }
+.sol-icon {
+  flex-shrink: 0; width: 40px; height: 40px;
+  border: 1px solid var(--gold-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; color: var(--gold);
+}
+.sol-title { font-size: .95rem; font-weight: 600; margin-bottom: .3rem; }
+.sol-desc { font-size: .82rem; color: var(--muted); }
+
+/* ─── FLOW ────────────────────────────────────────────────── */
+#flow {
+  padding: 8rem 0;
+  background: var(--navy-mid);
+}
+.flow-steps {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 0; margin-top: 4rem;
+  position: relative;
+}
+.flow-steps::before {
+  content: '';
+  position: absolute;
+  top: 36px; left: 12.5%; right: 12.5%;
+  height: 1px; background: var(--border);
+}
+.flow-step { text-align: center; padding: 0 1rem; }
+.flow-step-num {
+  width: 72px; height: 72px; margin: 0 auto 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 1.2rem; color: var(--gold);
+  position: relative;
+}
+.flow-step-num::after {
+  content: '';
+  position: absolute; inset: 4px;
+  border: 1px solid rgba(200,164,90,.2);
+}
+.flow-step-title { font-size: .95rem; font-weight: 600; margin-bottom: .5rem; }
+.flow-step-desc { font-size: .8rem; color: var(--muted); line-height: 1.7; }
+.flow-arrow {
+  position: absolute; top: 22px;
+  font-size: .85rem; color: var(--gold-dim);
+  z-index: 1;
+}
+.flow-arrow:nth-of-type(1) { left: calc(25% - 12px); }
+.flow-arrow:nth-of-type(2) { left: calc(50% - 12px); }
+.flow-arrow:nth-of-type(3) { left: calc(75% - 12px); }
+
+/* ─── FEATURES ────────────────────────────────────────────── */
+#features { padding: 8rem 0; }
+.features-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1.5px; margin-top: 4rem;
+  border: 1.5px solid var(--border);
+}
+.feature-card {
+  background: var(--navy); padding: 2.5rem;
+  transition: background .3s;
+}
+.feature-card:hover { background: var(--navy-mid); }
+.feature-tag {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: .68rem; letter-spacing: .1em;
+  border: 1px solid var(--gold-dim); color: var(--gold);
+  padding: .2rem .6rem; margin-bottom: 1rem;
+}
+.feature-title { font-size: 1.1rem; font-weight: 600; margin-bottom: .75rem; }
+.feature-desc { font-size: .85rem; color: var(--muted); line-height: 1.8; }
+.feature-items { margin-top: 1rem; display: flex; flex-direction: column; gap: .4rem; }
+.feature-item {
+  font-size: .8rem; color: var(--muted);
+  display: flex; align-items: flex-start; gap: .5rem;
+}
+.feature-item::before { content: '—'; color: var(--gold-dim); flex-shrink: 0; }
+
+/* ─── PRICING ─────────────────────────────────────────────── */
+#pricing {
+  padding: 8rem 0;
+  background: var(--navy-mid);
+}
+.pricing-card {
+  max-width: 760px; margin: 4rem auto 0;
+  border: 1px solid var(--gold-dim);
+  background: linear-gradient(135deg, var(--navy-light) 0%, var(--navy) 100%);
+  padding: 3rem 4rem;
+  position: relative; overflow: hidden;
+}
+.pricing-card::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,164,90,.08) 0%, transparent 70%);
+}
+.pricing-label {
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .15em;
+  color: var(--gold); margin-bottom: 1.5rem;
+}
+.pricing-amount {
+  font-family: var(--font-serif); font-size: 3.5rem; font-weight: 700;
+  line-height: 1; margin-bottom: .5rem;
+}
+.pricing-amount sub {
+  font-size: 1rem; vertical-align: middle;
+  margin-left: .3rem; color: var(--muted); font-weight: 400;
+}
+.pricing-note { font-size: .82rem; color: var(--muted); margin-bottom: 2.5rem; }
+.pricing-divider {
+  height: 1px; background: var(--border); margin-bottom: 2rem;
+}
+.pricing-running {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+}
+.running-item-label { font-size: .78rem; color: var(--muted); margin-bottom: .25rem; }
+.running-item-val { font-size: .92rem; font-weight: 600; }
+
+/* ─── DIAGNOSIS CTA ───────────────────────────────────────── */
+#diag-cta {
+  padding: 8rem 0;
+  text-align: center;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-mid) 100%);
+}
+#diag-cta .section-inner { max-width: 700px; }
+.cta-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700; line-height: 1.3; margin-bottom: 1rem;
+}
+.cta-sub {
+  font-size: .92rem; color: var(--muted); line-height: 1.8; margin-bottom: 2.5rem;
+}
+.cta-note { font-size: .75rem; color: var(--muted); margin-top: 1rem; }
+
+/* ─── DIAGNOSIS OVERLAY ───────────────────────────────────── */
+#diag-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(6,16,31,.96);
+  backdrop-filter: blur(12px);
+  display: none; flex-direction: column;
+  overflow-y: auto;
+}
+#diag-overlay.active { display: flex; }
+
+.diag-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.5rem 3rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.diag-logo {
+  font-family: var(--font-serif); font-size: .9rem;
+  color: var(--gold); letter-spacing: .05em;
+}
+.diag-close {
+  width: 36px; height: 36px;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 1.2rem;
+  transition: color .2s, border-color .2s;
+}
+.diag-close:hover { color: var(--white); border-color: var(--muted); }
+
+.diag-progress {
+  display: flex; gap: 0; flex-shrink: 0;
+}
+.diag-prog-step {
+  flex: 1; height: 3px; background: var(--navy-light);
+  transition: background .4s;
+}
+.diag-prog-step.done { background: var(--gold); }
+.diag-prog-step.active { background: var(--gold-dim); }
+
+.diag-body {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 3rem;
+}
+.diag-step {
+  width: 100%; max-width: 640px;
+  display: none;
+  animation: fadeUp .5s var(--ease-out) forwards;
+}
+.diag-step.active { display: block; }
+
+.diag-step-num {
+  font-family: var(--font-mono); font-size: .72rem;
+  letter-spacing: .2em; color: var(--gold); margin-bottom: .75rem;
+}
+.diag-step-title {
+  font-family: var(--font-serif); font-size: 1.6rem; font-weight: 700;
+  margin-bottom: .75rem;
+}
+.diag-step-sub { font-size: .88rem; color: var(--muted); margin-bottom: 2rem; }
+
+.diag-field { margin-bottom: 1.25rem; }
+.diag-label {
+  display: block; font-size: .82rem; color: var(--muted);
+  letter-spacing: .03em; margin-bottom: .5rem;
+}
+.diag-input, .diag-select {
+  width: 100%; background: var(--navy-light);
+  border: 1px solid var(--border);
+  color: var(--white); font-family: var(--font-sans);
+  font-size: .9rem; padding: .75rem 1rem;
+  outline: none; transition: border-color .2s;
+}
+.diag-input:focus, .diag-select:focus { border-color: var(--gold-dim); }
+.diag-select option { background: var(--navy-mid); }
+
+.diag-checkbox-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .6rem;
+}
+.diag-checkbox-label {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--border);
+  font-size: .85rem; cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.diag-checkbox-label:hover { border-color: var(--gold-dim); background: var(--navy-light); }
+.diag-checkbox-label input { display: none; }
+.diag-checkbox-label.checked {
+  border-color: var(--gold); background: rgba(200,164,90,.08);
+  color: var(--gold-light);
+}
+.diag-check-icon {
+  width: 16px; height: 16px; border: 1px solid var(--border);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-size: .7rem;
+}
+.diag-checkbox-label.checked .diag-check-icon { background: var(--gold); border-color: var(--gold); }
+
+.diag-actions {
+  display: flex; gap: 1rem; margin-top: 2rem;
+  align-items: center;
+}
+.btn-diag-next {
+  flex: 1; background: var(--gold); color: var(--navy);
+  font-size: .88rem; font-weight: 600; letter-spacing: .06em;
+  padding: .9rem; transition: background .2s;
+}
+.btn-diag-next:hover { background: var(--gold-light); }
+.btn-diag-back {
+  font-size: .82rem; color: var(--muted);
+  padding: .9rem 1.5rem; border: 1px solid var(--border);
+  transition: color .2s, border-color .2s;
+}
+.btn-diag-back:hover { color: var(--white); border-color: var(--muted); }
+
+/* ─── LOADING ─────────────────────────────────────────────── */
+#diag-loading {
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 60vh; text-align: center;
+}
+#diag-loading.active { display: flex; }
+.loading-ring {
+  width: 80px; height: 80px;
+  border: 1px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  margin-bottom: 2rem;
+}
+.loading-text {
+  font-family: var(--font-mono); font-size: .78rem;
+  letter-spacing: .12em; color: var(--gold);
+}
+.loading-sub {
+  font-size: .8rem; color: var(--muted); margin-top: .5rem;
+}
+
+/* ─── RESULTS ─────────────────────────────────────────────── */
+#diag-results {
+  display: none; width: 100%; max-width: 760px;
+}
+#diag-results.active { display: block; }
+
+.result-header {
+  display: flex; align-items: flex-start; gap: 2rem;
+  padding: 2rem; border: 1px solid var(--border);
+  background: var(--navy-light); margin-bottom: 1.5rem;
+}
+.result-score-block { text-align: center; flex-shrink: 0; }
+.result-score-num {
+  font-family: var(--font-serif); font-size: 4rem; font-weight: 700;
+  color: var(--gold); line-height: 1;
+}
+.result-score-label { font-size: .72rem; color: var(--muted); margin-top: .2rem; }
+.result-grade {
+  font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700;
+  color: var(--gold); margin-top: .5rem;
+}
+.result-headline { font-size: 1.25rem; font-weight: 600; margin-bottom: .6rem; }
+.result-summary { font-size: .88rem; color: var(--muted); line-height: 1.8; }
+
+.result-section { margin-bottom: 1.5rem; }
+.result-section-title {
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .15em;
+  color: var(--gold); margin-bottom: .75rem;
+}
+.result-cards { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.result-card {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border); background: var(--navy-mid);
+}
+.result-card-title { font-size: .88rem; font-weight: 600; margin-bottom: .25rem; }
+.result-card-desc { font-size: .78rem; color: var(--muted); }
+.sev-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  margin-right: .4rem; vertical-align: middle;
+}
+.sev-1 { background: var(--muted); }
+.sev-2 { background: #c8913a; }
+.sev-3 { background: var(--crimson); }
+
+.result-roi {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+  border: 1px solid var(--border); background: var(--border);
+}
+.roi-item {
+  background: var(--navy-mid); padding: 1.25rem;
+  text-align: center;
+}
+.roi-val { font-family: var(--font-serif); font-size: 1.3rem; font-weight: 600; color: var(--gold-light); }
+.roi-label { font-size: .72rem; color: var(--muted); margin-top: .3rem; }
+
+/* ─── BOOKING ─────────────────────────────────────────────── */
+#diag-booking {
+  display: none; width: 100%; max-width: 640px;
+}
+#diag-booking.active { display: block; }
+
+.booking-score-badge {
+  display: inline-flex; align-items: center; gap: .5rem;
+  border: 1px solid var(--gold-dim);
+  padding: .4rem 1rem; margin-bottom: 1.5rem;
+  font-size: .8rem; color: var(--gold);
+  font-family: var(--font-mono);
+}
+.booking-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+/* ─── SUCCESS ─────────────────────────────────────────────── */
+#diag-success {
+  display: none; text-align: center;
+  align-items: center; justify-content: center;
+  min-height: 60vh; flex-direction: column;
+}
+#diag-success.active { display: flex; }
+.success-icon {
+  width: 72px; height: 72px;
+  border: 1px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--gold);
+  animation: fadeUp .5s var(--ease-out) forwards;
+}
+.success-title {
+  font-family: var(--font-serif); font-size: 1.8rem; font-weight: 700;
+  margin-bottom: .75rem;
+}
+.success-sub { font-size: .88rem; color: var(--muted); line-height: 1.8; }
+.success-id { font-family: var(--font-mono); font-size: .8rem; color: var(--gold); margin-top: 1rem; }
+
+/* ─── FOOTER ──────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 3rem; text-align: center;
+}
+.footer-logo {
+  font-family: var(--font-serif); font-size: 1rem;
+  color: var(--gold); margin-bottom: .75rem;
+}
+.footer-copy { font-size: .78rem; color: var(--muted); }
+
+/* ─── ANIMATIONS ──────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: .4; } 50% { opacity: 1; }
+}
+
+/* ─── REVEAL ──────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .7s var(--ease-out), transform .7s var(--ease-out);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  #hero { padding: 7rem 1.5rem 4rem; }
+  .hero-stats { position: static; margin-top: 3rem; flex-direction: column; gap: 1.5rem; }
+  .section-inner { padding: 0 1.5rem; }
+  .pain-grid, .features-grid { grid-template-columns: 1fr; }
+  .solution-layout { grid-template-columns: 1fr; gap: 3rem; }
+  .solution-visual { display: none; }
+  .flow-steps { grid-template-columns: 1fr 1fr; }
+  .flow-steps::before { display: none; }
+  .flow-arrow { display: none; }
+  .pricing-card { padding: 2rem; }
+  .pricing-running { grid-template-columns: 1fr; }
+  .diag-body { padding: 1.5rem; }
+  .diag-checkbox-grid { grid-template-columns: 1fr; }
+  .result-header { flex-direction: column; gap: 1rem; }
+  .result-cards { grid-template-columns: 1fr; }
+  .result-roi { grid-template-columns: 1fr; }
+  .booking-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── NAV ─────────────────────────────────────────────────── -->
+<nav id="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">NX</div>
+    Nexcess
+  </div>
+  <div class="nav-links">
+    <a href="#solution">ソリューション</a>
+    <a href="#features">機能</a>
+    <a href="#pricing">料金</a>
+  </div>
+  <button class="nav-cta" onclick="openDiagnosis()">無料適合診断を受ける</button>
+</nav>
+
+<!-- ─── HERO ─────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="hero-grid"></div>
+  </div>
+  <div class="hero-eyebrow">Violet Yokohama (バイオレットヨコハマ/横浜店)様向け Path-Flow診断</div>
+  <h1 class="hero-title">
+    Violet Yokohama (バイオレットヨコハマ/横浜店)の魅力を、来店につながる導線へ。
+  </h1>
+  <p class="hero-sub">横浜駅の美容室としての強みを活かし、問い合わせ・予約までの流れを分かりやすく整える個別提案です。</p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="openDiagnosis()">
+      ⚡ 無料で適合診断を受ける
+    </button>
+    <a href="#solution" class="btn-secondary">
+      システム概要を見る <span class="btn-arrow">→</span>
+    </a>
+  </div>
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-num">4</div>
+      <div class="hero-stat-label">業務プロセスを統合</div>
+    </div>
+    <div>
+      <div class="hero-stat-num">AI</div>
+      <div class="hero-stat-label">事前診断・スコアリング</div>
+    </div>
+    <div>
+      <div class="hero-stat-num">SaaS</div>
+      <div class="hero-stat-label">クラウド型 即日利用可</div>
+    </div>
+  </div>
+  <div class="hero-scroll-hint">
+    <div class="scroll-line"></div>
+    SCROLL
+  </div>
+
+  <div class="section-inner" style="margin-top:2rem;padding-bottom:1rem">
+    <div class="section-label">PERSONALIZED DIAGNOSIS</div>
+    <p style="max-width:760px;color:var(--muted)">現在のWeb導線を整理し、見込み客が次の行動を選びやすい構成へ改善する余地があります。</p>
+    <p style="max-width:760px;margin-top:.75rem">公開情報から確認できる店舗独自の特徴を訴求軸として活用します。</p>
+  </div>
+</section>
+
+<!-- ─── PAIN ──────────────────────────────────────────────────── -->
+<section id="pain">
+  <div class="section-inner">
+    <div class="section-label reveal">CURRENT CHALLENGES</div>
+    <h2 class="section-title reveal">こんな課題に<em>心当たりはありませんか</em></h2>
+    <div class="pain-grid reveal">
+      <div class="pain-card">
+        <div class="pain-num">01</div>
+        <div class="pain-title">集客できても、その先が続かない</div>
+        <p class="pain-desc">広告費をかけて問い合わせは来るが、受け答えに工数がかかり、見込み度の低い顧客対応に時間を費やしている。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">02</div>
+        <div class="pain-title">担当者が不在だと対応が止まる</div>
+        <p class="pain-desc">電話・メール・予約対応が属人化。担当者の休日や繁忙期に顧客を待たせ、機会損失が発生している。</p>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">03</div>
+        <div class="pain-title">成約率の改善方法がわからない</div>
+        <p class="pain-desc">どの顧客が本当に見込みがあるのか、どの導線で離脱しているのかを可視化できず、打ち手が見えない。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── SOLUTION ──────────────────────────────────────────────── -->
+<section id="solution">
+  <div class="section-inner">
+    <div class="section-label reveal">SOLUTION</div>
+    <h2 class="section-title reveal">4つの業務プロセスを<em>一体化する</em></h2>
+    <div class="solution-layout">
+      <div class="solution-visual reveal">
+        <div class="sol-orb">集客<br>Web</div>
+        <div class="sol-orb">SEO<br>LP</div>
+        <div class="sol-orb">AI<br>診断</div>
+        <div class="sol-orb">予約<br>管理</div>
+        <div class="sol-orb">CRM<br>連携</div>
+        <div class="sol-orb">解析<br>改善</div>
+        <div class="sol-center">
+          <div class="sol-center-label">NEXCESS</div>
+          <div class="sol-center-big">AI</div>
+        </div>
+      </div>
+      <div class="solution-list reveal">
+        <div class="sol-item">
+          <div class="sol-icon">①</div>
+          <div>
+            <div class="sol-title">マーケティング・集客</div>
+            <div class="sol-desc">LP設計・SEO・CVポイント設計で見込み顧客を効率的に獲得</div>
+          </div>
+        </div>
+        <div class="sol-item">
+          <div class="sol-icon">②</div>
+          <div>
+            <div class="sol-title">AI事前診断・顧客対応</div>
+            <div class="sol-desc">生成AIが課題・ニーズを分類し、適合サービスを24時間自動判定</div>
+          </div>
+        </div>
+        <div class="sol-item">
+          <div class="sol-icon">③</div>
+          <div>
+            <div class="sol-title">顧客管理・スコアリング</div>
+            <div class="sol-desc">診断結果・属性・行動ログを統合し、成約確率を自動推定</div>
+          </div>
+        </div>
+        <div class="sol-item">
+          <div class="sol-icon">④</div>
+          <div>
+            <div class="sol-title">予約・受注管理</div>
+            <div class="sol-desc">AI判定結果に基づく最適予約枠の提示とカレンダー同期</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FLOW ──────────────────────────────────────────────────── -->
+<section id="flow">
+  <div class="section-inner">
+    <div class="section-label reveal">USER FLOW</div>
+    <h2 class="section-title reveal">顧客の体験フロー</h2>
+    <div class="flow-steps reveal">
+      <span class="flow-arrow">▶</span>
+      <span class="flow-arrow">▶</span>
+      <span class="flow-arrow">▶</span>
+      <div class="flow-step">
+        <div class="flow-step-num">01</div>
+        <div class="flow-step-title">LP訪問</div>
+        <p class="flow-step-desc">広告・SEOから集客。CVポイントで診断へ誘導</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">02</div>
+        <div class="flow-step-title">AI事前診断</div>
+        <p class="flow-step-desc">課題・業種・規模を入力。生成AIが分析</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">03</div>
+        <div class="flow-step-title">診断結果表示</div>
+        <p class="flow-step-desc">適合スコア・推奨機能・ROI概算を即時提示</p>
+      </div>
+      <div class="flow-step">
+        <div class="flow-step-num">04</div>
+        <div class="flow-step-title">予約確定</div>
+        <p class="flow-step-desc">最適な商談枠を提示。担当者へ自動通知</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FEATURES ──────────────────────────────────────────────── -->
+<section id="features">
+  <div class="section-inner">
+    <div class="section-label reveal">FEATURES</div>
+    <h2 class="section-title reveal">主要機能</h2>
+    <div class="features-grid reveal">
+      <div class="feature-card">
+        <div class="feature-tag">4.1 WEB集客</div>
+        <div class="feature-title">集客 × コンバージョン最適化</div>
+        <p class="feature-desc">SEO対応のコンテンツ配信から広告LPまで、集客から診断導線への誘導を一体設計します。</p>
+        <div class="feature-items">
+          <div class="feature-item">集客用Webサイト構築</div>
+          <div class="feature-item">広告LP設計</div>
+          <div class="feature-item">SEO対応コンテンツ配信</div>
+          <div class="feature-item">CVポイント設計</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-tag">4.2 AI診断</div>
+        <div class="feature-title">生成AI事前診断エンジン</div>
+        <p class="feature-desc">顧客の入力情報をリアルタイムで解析。課題・ニーズを分類し、最適なサービスを自動判定します。</p>
+        <div class="feature-items">
+          <div class="feature-item">診断質問フロー管理</div>
+          <div class="feature-item">生成AIによる課題・ニーズ分類</div>
+          <div class="feature-item">適合サービスの自動判定</div>
+          <div class="feature-item">スコアリング・成約確率推定</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-tag">4.3 AI解析</div>
+        <div class="feature-title">行動データ統合解析</div>
+        <p class="feature-desc">外部ツールに依存せず、AIが業務判断の中核を担います。診断フローの継続改善にもフィードバック。</p>
+        <div class="feature-items">
+          <div class="feature-item">行動ログ × 診断結果の統合解析</div>
+          <div class="feature-item">成約確率・適合度推定</div>
+          <div class="feature-item">導線改善へのフィードバック</div>
+          <div class="feature-item">Before / After 改善指標の可視化</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-tag">4.4 予約連動</div>
+        <div class="feature-title">スマート予約管理</div>
+        <p class="feature-desc">AI判定に基づく最適予約枠を自動提示。Googleカレンダーや既存CRMとの連携で重複を防止します。</p>
+        <div class="feature-items">
+          <div class="feature-item">サービス別予約枠管理</div>
+          <div class="feature-item">AI結果連動の予約候補提示</div>
+          <div class="feature-item">Googleカレンダー同期</div>
+          <div class="feature-item">CRM連携・顧客履歴管理</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PRICING ────────────────────────────────────────────────── -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="section-label reveal">PRICING</div>
+    <h2 class="section-title reveal">料金体系</h2>
+    <div class="pricing-card reveal">
+      <div class="pricing-label">初期導入費用（税別・一括）</div>
+      <div class="pricing-amount">4,500,000 <sub>円</sub></div>
+      <p class="pricing-note">クラウド型SaaS。補助金申請対応（IT導入補助金 等）</p>
+      <div class="pricing-divider"></div>
+      <div class="pricing-running">
+        <div>
+          <div class="running-item-label">クラウドサーバー</div>
+          <div class="running-item-val">月額 50,000円〜</div>
+        </div>
+        <div>
+          <div class="running-item-label">AI APIトークン</div>
+          <div class="running-item-val">従量 10,000円〜</div>
+        </div>
+        <div>
+          <div class="running-item-label">保守・サポート</div>
+          <div class="running-item-val">月額 50,000円</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── CTA ───────────────────────────────────────────────────── -->
+<section id="diag-cta">
+  <div class="section-inner">
+    <div class="section-label">FREE DIAGNOSIS</div>
+    <h2 class="cta-title">まず、あなたの会社に<br>どれだけ適合するか確認してください。</h2>
+    <p class="cta-sub">4ステップの質問に答えるだけで、AIが導入適合スコアと推奨機能・ROI概算を即時提示します。費用・義務は一切ありません。</p>
+    <button class="btn-primary" onclick="openDiagnosis()" style="font-size:.95rem;padding:1rem 2.5rem;">
+      ⚡ 無料で適合診断を受ける（約3分）
+    </button>
+    <p class="cta-note">※ 入力情報は診断目的のみに使用します</p>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-logo">合同会社Nexcess</div>
+  <p class="footer-copy">© 2025 Nexcess LLC. All rights reserved. | 本システムに関するお問い合わせ: info@nexccess.com</p>
+</footer>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DIAGNOSIS OVERLAY
+════════════════════════════════════════════════════════════════ -->
+<div id="diag-overlay">
+  <div class="diag-header">
+    <div class="diag-logo">AI 事前診断システム</div>
+    <button class="diag-close" onclick="closeDiagnosis()">✕</button>
+  </div>
+  <div class="diag-progress">
+    <div class="diag-prog-step active" id="prog-1"></div>
+    <div class="diag-prog-step" id="prog-2"></div>
+    <div class="diag-prog-step" id="prog-3"></div>
+    <div class="diag-prog-step" id="prog-4"></div>
+  </div>
+
+  <div class="diag-body">
+
+    <!-- STEP 1: 基本情報 -->
+    <div class="diag-step active" id="step-1">
+      <div class="diag-step-num">STEP 01 / 04</div>
+      <h2 class="diag-step-title">基本情報を教えてください</h2>
+      <p class="diag-step-sub">診断精度を高めるために使用します</p>
+
+      <div class="diag-field">
+        <label class="diag-label">業種 / 業界 <span style="color:var(--crimson)">*</span></label>
+        <input class="diag-input" id="f-industry" type="text" placeholder="例：士業、医療、製造、不動産、IT、コンサルなど">
+      </div>
+      <div class="diag-field">
+        <label class="diag-label">企業規模</label>
+        <select class="diag-select" id="f-size">
+          <option value="">選択してください</option>
+          <option>個人・フリーランス</option>
+          <option>小規模（〜10名）</option>
+          <option>中小企業（10〜100名）</option>
+          <option>中堅〜大企業（100名〜）</option>
+        </select>
+      </div>
+      <div class="diag-field">
+        <label class="diag-label">地域（主な営業地域）</label>
+        <input class="diag-input" id="f-area" type="text" placeholder="例：東京、神奈川、関東全域、全国">
+      </div>
+
+      <div class="diag-actions">
+        <button class="btn-diag-next" onclick="nextStep(1)">次へ →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: 課題 -->
+    <div class="diag-step" id="step-2">
+      <div class="diag-step-num">STEP 02 / 04</div>
+      <h2 class="diag-step-title">現在の課題を選んでください</h2>
+      <p class="diag-step-sub">当てはまるものをすべて選択してください</p>
+
+      <div class="diag-checkbox-grid" id="challenge-grid">
+        <!-- JS で生成 -->
+      </div>
+
+      <div class="diag-actions">
+        <button class="btn-diag-back" onclick="prevStep(2)">← 戻る</button>
+        <button class="btn-diag-next" onclick="nextStep(2)">次へ →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: 現状 -->
+    <div class="diag-step" id="step-3">
+      <div class="diag-step-num">STEP 03 / 04</div>
+      <h2 class="diag-step-title">現在の業務状況</h2>
+      <p class="diag-step-sub">おおよその数値で構いません</p>
+
+      <div class="diag-field">
+        <label class="diag-label">月間の問い合わせ・見込み客数</label>
+        <select class="diag-select" id="f-inquiries">
+          <option value="">選択してください</option>
+          <option>10件未満</option>
+          <option>10〜30件</option>
+          <option>30〜100件</option>
+          <option>100件以上</option>
+          <option>不明・把握していない</option>
+        </select>
+      </div>
+      <div class="diag-field">
+        <label class="diag-label">現在使用中のツール・システム</label>
+        <input class="diag-input" id="f-tools" type="text" placeholder="例：Googleフォーム、Salesforce、LINE、自社システムなし など">
+      </div>
+
+      <div class="diag-actions">
+        <button class="btn-diag-back" onclick="prevStep(3)">← 戻る</button>
+        <button class="btn-diag-next" onclick="nextStep(3)">次へ →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: 目標 -->
+    <div class="diag-step" id="step-4">
+      <div class="diag-step-num">STEP 04 / 04</div>
+      <h2 class="diag-step-title">目標・導入イメージ</h2>
+      <p class="diag-step-sub">AI診断の精度向上に使用します</p>
+
+      <div class="diag-field">
+        <label class="diag-label">導入で実現したいこと</label>
+        <input class="diag-input" id="f-goals" type="text" placeholder="例：受付工数を削減したい、成約率を上げたい、夜間対応を自動化したい">
+      </div>
+      <div class="diag-field">
+        <label class="diag-label">導入検討時期・予算感</label>
+        <select class="diag-select" id="f-timing">
+          <option value="">選択してください</option>
+          <option>3ヶ月以内に導入検討</option>
+          <option>6ヶ月以内に検討</option>
+          <option>来期以降で検討</option>
+          <option>情報収集段階</option>
+        </select>
+      </div>
+
+      <div class="diag-actions">
+        <button class="btn-diag-back" onclick="prevStep(4)">← 戻る</button>
+        <button class="btn-diag-next" onclick="submitDiagnosis()">AIで診断する ⚡</button>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="diag-loading">
+      <div class="loading-ring"></div>
+      <div class="loading-text">AI ANALYZING...</div>
+      <div class="loading-sub">課題データを解析しています。しばらくお待ちください。</div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="diag-results">
+      <div class="result-header">
+        <div class="result-score-block">
+          <div class="result-score-num" id="r-score">—</div>
+          <div class="result-score-label">適合スコア</div>
+          <div class="result-grade" id="r-grade">—</div>
+        </div>
+        <div>
+          <div class="result-headline" id="r-headline"></div>
+          <div class="result-summary" id="r-summary"></div>
+        </div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">IDENTIFIED PAIN POINTS</div>
+        <div class="result-cards" id="r-pains"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">RECOMMENDED FEATURES</div>
+        <div class="result-cards" id="r-features"></div>
+      </div>
+
+      <div class="result-section">
+        <div class="result-section-title">ROI ESTIMATE</div>
+        <div class="result-roi" id="r-roi"></div>
+      </div>
+
+      <div class="diag-actions" style="margin-top:2rem;">
+        <button class="btn-diag-next" onclick="showBooking()">この結果を持って相談予約する →</button>
+      </div>
+    </div>
+
+    <!-- BOOKING -->
+    <div id="diag-booking">
+      <div class="diag-step-num">BOOKING</div>
+      <h2 class="diag-step-title">無料相談・デモの予約</h2>
+      <p class="diag-step-sub">診断結果をもとに担当者がご提案します（2営業日以内に連絡）</p>
+
+      <div class="booking-score-badge" id="booking-badge">診断スコア: — 点</div>
+
+      <div class="booking-grid">
+        <div class="diag-field">
+          <label class="diag-label">会社名 <span style="color:var(--crimson)">*</span></label>
+          <input class="diag-input" id="b-company" type="text" placeholder="株式会社〇〇">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">お名前 <span style="color:var(--crimson)">*</span></label>
+          <input class="diag-input" id="b-name" type="text" placeholder="山田 太郎">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">メールアドレス <span style="color:var(--crimson)">*</span></label>
+          <input class="diag-input" id="b-email" type="email" placeholder="taro@example.com">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">電話番号</label>
+          <input class="diag-input" id="b-phone" type="tel" placeholder="090-0000-0000">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">役職</label>
+          <input class="diag-input" id="b-position" type="text" placeholder="代表取締役、営業部長 など">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">希望日 <span style="color:var(--crimson)">*</span></label>
+          <input class="diag-input" id="b-date" type="date">
+        </div>
+        <div class="diag-field">
+          <label class="diag-label">希望時間 <span style="color:var(--crimson)">*</span></label>
+          <select class="diag-input" id="b-time"><option value="">選択</option><option>09:00</option><option>10:00</option><option>11:00</option><option>13:00</option><option>14:00</option><option>15:00</option><option>16:00</option><option>17:00</option><option>18:00</option></select>
+        </div>
+      </div>
+
+      <div class="diag-field">
+        <label class="diag-label">ご質問・ご要望（任意）</label>
+        <input class="diag-input" id="b-message" type="text" placeholder="補助金申請サポートについて聞きたい など">
+      </div>
+
+      <div class="diag-actions">
+        <button class="btn-diag-back" onclick="backToResults()">← 診断結果に戻る</button>
+        <button class="btn-diag-next" onclick="submitBooking()">予約を申し込む</button>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="diag-success">
+      <div class="success-icon">✓</div>
+      <h2 class="success-title">予約を受け付けました</h2>
+      <p class="success-sub">2営業日以内に担当者よりご連絡いたします。<br>引き続きご検討のほど、よろしくお願いいたします。</p>
+      <div class="success-id" id="success-booking-id"></div>
+      <div style="margin-top:2rem;">
+        <button class="btn-diag-back" onclick="closeDiagnosis()">閉じる</button>
+      </div>
+    </div>
+
+  </div><!-- /.diag-body -->
+</div><!-- /#diag-overlay -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────
+let currentStep = 1;
+let diagResult = null;
+
+const CHALLENGES = [
+  '集客数が少ない・不安定',
+  '問い合わせ後の対応工数が多い',
+  '担当者不在時に対応できない',
+  '見込み顧客の選別ができていない',
+  '成約率が低い・改善策がわからない',
+  '予約・スケジュール管理が煩雑',
+  '顧客データが分散・属人化している',
+  '夜間・休日の対応ができていない',
+  '営業プロセスが標準化されていない',
+  'システム導入コストが見えない',
+];
+
+// ── Init ───────────────────────────────────────────────────────
+(function() {
+  // Checkbox grid
+  const grid = document.getElementById('challenge-grid');
+  CHALLENGES.forEach(c => {
+    const lbl = document.createElement('label');
+    lbl.className = 'diag-checkbox-label';
+    lbl.innerHTML = `<input type="checkbox" value="${c}"><div class="diag-check-icon"></div>${c}`;
+    lbl.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isChecked = lbl.classList.toggle('checked');
+      lbl.querySelector('.diag-check-icon').textContent = isChecked ? '✓' : '';
+    });
+    grid.appendChild(lbl);
+  });
+
+  // Scroll reveal
+  const ro = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+
+  // Nav scroll
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+})();
+
+// ── Diagnosis overlay ──────────────────────────────────────────
+function openDiagnosis() {
+  document.getElementById('diag-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  goToStep(1);
+}
+function closeDiagnosis() {
+  document.getElementById('diag-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ── Step navigation ────────────────────────────────────────────
+function goToStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById(`step-${i}`).classList.remove('active');
+    const p = document.getElementById(`prog-${i}`);
+    p.classList.remove('active', 'done');
+    if (i < n) p.classList.add('done');
+    else if (i === n) p.classList.add('active');
+  });
+  document.getElementById(`step-${n}`).classList.add('active');
+  currentStep = n;
+  hideAll();
+  document.getElementById(`step-${n}`).classList.add('active');
+}
+
+function hideAll() {
+  ['diag-loading','diag-results','diag-booking','diag-success'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('active');
+    el.style.display = '';
+  });
+}
+
+function nextStep(from) {
+  if (from === 1) {
+    if (!document.getElementById('f-industry').value.trim()) {
+      document.getElementById('f-industry').focus();
+      document.getElementById('f-industry').style.borderColor = 'var(--crimson)';
+      return;
+    }
+  }
+  if (from === 2) {
+    const checked = document.querySelectorAll('#challenge-grid .diag-checkbox-label.checked');
+    if (checked.length === 0) {
+      alert('課題を1つ以上選択してください');
+      return;
+    }
+  }
+  goToStep(from + 1);
+}
+
+function prevStep(from) { goToStep(from - 1); }
+
+// ── Submit diagnosis ───────────────────────────────────────────
+async function submitDiagnosis() {
+  const challenges = Array.from(
+    document.querySelectorAll('#challenge-grid .diag-checkbox-label.checked input')
+  ).map(i => i.value);
+
+  const payload = {
+    industry:          document.getElementById('f-industry').value,
+    size:              document.getElementById('f-size').value,
+    area:              document.getElementById('f-area').value,
+    challenges,
+    monthly_inquiries: document.getElementById('f-inquiries').value,
+    current_tools:     document.getElementById('f-tools').value,
+    goals:             document.getElementById('f-goals').value,
+    budget_timing:     document.getElementById('f-timing').value,
+  };
+
+  // Hide all steps, show loading
+  [1,2,3,4].forEach(i => document.getElementById(`step-${i}`).classList.remove('active'));
+  hideAll();
+  const loading = document.getElementById('diag-loading');
+  loading.classList.add('active');
+  loading.style.display = 'flex';
+
+  try {
+    const res = await fetch('/api/diagnose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '診断エラー');
+    diagResult = data;
+    showResults(data);
+  } catch (err) {
+    loading.classList.remove('active');
+    loading.style.display = '';
+    alert('診断中にエラーが発生しました: ' + err.message);
+    goToStep(4);
+  }
+}
+
+function showResults(d) {
+  document.getElementById('diag-loading').classList.remove('active');
+  document.getElementById('diag-loading').style.display = '';
+
+  document.getElementById('r-score').textContent   = d.score;
+  document.getElementById('r-grade').textContent   = d.grade;
+  document.getElementById('r-headline').textContent = d.headline;
+  document.getElementById('r-summary').textContent  = d.summary;
+
+  // Pains
+  const painsEl = document.getElementById('r-pains');
+  painsEl.innerHTML = '';
+  (d.pain_points || []).forEach(p => {
+    const sevClass = `sev-${p.severity || 2}`;
+    painsEl.innerHTML += `
+      <div class="result-card">
+        <div class="result-card-title">
+          <span class="sev-dot ${sevClass}"></span>${p.title}
+        </div>
+        <div class="result-card-desc">${p.detail}</div>
+      </div>`;
+  });
+
+  // Features
+  const featsEl = document.getElementById('r-features');
+  featsEl.innerHTML = '';
+  (d.recommended_features || []).forEach(f => {
+    featsEl.innerHTML += `
+      <div class="result-card">
+        <div class="result-card-title">★ ${f.feature}</div>
+        <div class="result-card-desc">${f.reason}</div>
+      </div>`;
+  });
+
+  // ROI
+  const roi = d.roi_estimate || {};
+  document.getElementById('r-roi').innerHTML = `
+    <div class="roi-item">
+      <div class="roi-val">${roi.workload_reduction || '—'}</div>
+      <div class="roi-label">工数削減（概算）</div>
+    </div>
+    <div class="roi-item">
+      <div class="roi-val">${roi.conversion_improvement || '—'}</div>
+      <div class="roi-label">成約率改善目安</div>
+    </div>
+    <div class="roi-item">
+      <div class="roi-val">${roi.payback_period || '—'}</div>
+      <div class="roi-label">投資回収期間目安</div>
+    </div>`;
+
+  // Progress bars all done
+  [1,2,3,4].forEach(i => {
+    const p = document.getElementById(`prog-${i}`);
+    p.classList.remove('active');
+    p.classList.add('done');
+  });
+
+  const results = document.getElementById('diag-results');
+  results.classList.add('active');
+  results.style.display = 'block';
+}
+
+function showBooking() {
+  document.getElementById('diag-results').classList.remove('active');
+  document.getElementById('diag-results').style.display = 'none';
+
+  if (diagResult) {
+    document.getElementById('booking-badge').textContent =
+      `診断スコア: ${diagResult.score}点 (${diagResult.grade}ランク)`;
+  }
+
+  const bk = document.getElementById('diag-booking');
+  bk.classList.add('active');
+  bk.style.display = 'block';
+}
+
+function backToResults() {
+  document.getElementById('diag-booking').classList.remove('active');
+  document.getElementById('diag-booking').style.display = 'none';
+  const results = document.getElementById('diag-results');
+  results.classList.add('active');
+  results.style.display = 'block';
+}
+
+// ── Submit booking ─────────────────────────────────────────────
+async function submitBooking() {
+  const company = document.getElementById('b-company').value.trim();
+  const name    = document.getElementById('b-name').value.trim();
+  const email   = document.getElementById('b-email').value.trim();
+  const date    = document.getElementById('b-date').value;
+  const time    = document.getElementById('b-time').value;
+  if (!company || !name || !email) { alert('会社名・お名前・メールアドレスは必須です'); return; }
+  if (!date || !time) { alert('希望日・希望時間を選択してください'); return; }
+
+  const payload = {
+    company, name, email,
+    phone:           document.getElementById('b-phone').value,
+    position:        document.getElementById('b-position').value,
+    preferred_date:  date,
+    preferred_time:  time,
+    message:         document.getElementById('b-message').value,
+    diagnosis_score: diagResult?.score,
+    diagnosis_grade: diagResult?.grade,
+  };
+
+  try {
+    const res = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '送信エラー');
+    document.getElementById('diag-booking').classList.remove('active');
+    document.getElementById('diag-booking').style.display = 'none';
+    document.getElementById('success-booking-id').textContent = `受付番号: ${data.booking_id}`;
+    const succ = document.getElementById('diag-success');
+    succ.classList.add('active');
+    succ.style.display = 'flex';
+  } catch (err) {
+    alert('送信中にエラーが発生しました: ' + err.message);
+  }
+}
+</script>
+
+</body>
+</html>
