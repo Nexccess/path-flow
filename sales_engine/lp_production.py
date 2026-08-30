@@ -18,6 +18,7 @@ DEFAULT_OUTPUT = REPO_ROOT / "generated"
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "qwen2.5:7b"
 CUSTOMER_VOICE_DIR = HERE / "customer_voice"
+STORE_INTELLIGENCE_DIR = HERE / "store_intelligence"
 VERSION = "lp-production-e2e-v1"
 
 
@@ -105,6 +106,13 @@ def load_go_lead(conn: sqlite3.Connection, lead_id: int | None = None) -> dict:
     return item
 
 
+def load_store_intelligence(lead: dict) -> dict:
+    path = STORE_INTELLIGENCE_DIR / f"lead_{int(lead['lead_id'])}.json"
+    if not path.exists():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def load_customer_voice(lead: dict) -> dict:
     category = " ".join(
         filter(
@@ -148,6 +156,7 @@ def fallback_copy(lead: dict) -> dict:
 
 def generate_copy(lead: dict, ollama_url: str, model: str) -> dict:
     intel = lead["intelligence"]
+    store_intelligence = load_store_intelligence(lead)
     customer_voice = load_customer_voice(lead)
     prompt = f"""You write concise Japanese landing-page copy for Path-Flow.
 Return JSON only. Never invent facts.
@@ -171,7 +180,11 @@ Lead:
     "area": lead.get("area"),
     "website_url": lead.get("website_url"),
     "intelligence": intel,
+    "store_intelligence": store_intelligence,
 }, ensure_ascii=False)}
+
+STORE_INTELLIGENCE:
+{json.dumps(store_intelligence, ensure_ascii=False)}
 
 CUSTOMER_VOICE:
 {json.dumps(customer_voice, ensure_ascii=False)}
