@@ -106,6 +106,14 @@ class LPProductionE2ETest(unittest.TestCase):
             "subheadline": "渋谷のネイルサロン向け個別提案です。",
             "diagnosis": "予約導線を分かりやすくできる余地があります。",
             "strength": "丁寧な施術が強みです。",
+            "diagnostic_questions": [
+                {
+                    "id": "goal",
+                    "text": "今回、一番変えたいのはどこですか？",
+                    "options": ["顔まわり", "長さ", "カラー"]
+                }
+            ],
+            "customer_voice_version": "customer-voice-hair-v1",
         }
 
         result = lp_production.generate(
@@ -123,6 +131,8 @@ class LPProductionE2ETest(unittest.TestCase):
         self.assertIn("テストネイル", html)
         self.assertIn("予約につながる導線", html)
         self.assertIn('<meta name="pathflow-lead-id" content="1">', html)
+        self.assertIn("CUSTOMER VOICE DIAGNOSIS", html)
+        self.assertIn("今回、一番変えたいのはどこですか？", html)
 
         conn = sqlite3.connect(self.db)
         row = conn.execute(
