@@ -11,6 +11,7 @@ on:
       - lead-supply-engine-v1
       - screening-automation-v1
       - lead-discovery-v1
+      - lp-production-e2e-v1
     paths:
       - 'sales_engine/**'
       - '.github/workflows/sales-engine-ci.yml'
@@ -45,6 +46,9 @@ jobs:
 
       - name: Run Lead Discovery tests
         run: python -m unittest -v test_lead_discovery.py
+
+      - name: Run LP Production tests
+        run: python -m unittest -v test_lp_production.py
 
       - name: Run existing Sales Engine tests
         run: |
