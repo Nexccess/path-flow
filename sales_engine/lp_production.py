@@ -52,6 +52,23 @@ def load_go_lead(conn: sqlite3.Connection, lead_id: int | None = None) -> dict:
     ensure_queue_schema(conn)
     where = "q.lead_id=?" if lead_id is not None else "q.status='READY' AND COALESCE(q.lp_status, 'PENDING') IN ('PENDING','ERROR')"
     params = (lead_id,) if lead_id is not None else ()
+    decision_cols = {r[1] for r in conn.execute("PRAGMA table_info(screening_decisions)")}
+    if "decided_at" in decision_cols:
+        decision_join = """
+        JOIN screening_decisions d
+          ON d.rowid = (
+            SELECT d2.rowid
+            FROM screening_decisions d2
+            WHERE d2.lead_id=q.lead_id
+            ORDER BY d2.decided_at DESC, d2.rowid DESC
+            LIMIT 1
+          )
+        """
+    else:
+        # screening-v1 uses lead_id as the primary key, so there is exactly one
+        # current decision per lead. Keep this fallback for existing DBs.
+        decision_join = "JOIN screening_decisions d ON d.lead_id=q.lead_id"
+
     row = conn.execute(
         f"""
         SELECT
@@ -62,7 +79,7 @@ def load_go_lead(conn: sqlite3.Connection, lead_id: int | None = None) -> dict:
           i.intelligence_json
         FROM sales_queue q
         JOIN leads l ON l.lead_id=q.lead_id
-        JOIN screening_decisions d ON d.lead_id=q.lead_id
+        {decision_join}
         LEFT JOIN lead_discovery_intelligence i ON i.lead_id=q.lead_id
         WHERE {where}
         ORDER BY q.queue_id
@@ -151,7 +168,9 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
     rendered = template
     rendered = rendered.replace(
         "<title>生成AI活用型 事前診断・集客・予約最適化システム | 合同会社Nexcess</title>",
-        f"<title>{html.escape(title)}</title>",
+        f"<title>{html.escape(title)}</title>\n"
+        f'<meta name="pathflow-lead-id" content="{int(lead["lead_id"])}">\n'
+        f'<meta name="pathflow-company" content="{html.escape(company, quote=True)}">',
         1,
     )
     rendered = rendered.replace(
@@ -230,18 +249,37 @@ def generate(db: Path, lead_id: int | None, template: Path, output_root: Path, o
         conn.close()
 
 
-def verify_public_url(url: str) -> None:
+def verify_public_url(url: str, lead_id: int, company_name: str | None = None) -> None:
     res = requests.get(url, timeout=30, allow_redirects=True)
     res.raise_for_status()
-    if "<html" not in res.text.lower():
+    body = res.text
+    if "<html" not in body.lower():
         raise RuntimeError("Deployed URL did not return HTML")
+    marker = f'<meta name="pathflow-lead-id" content="{int(lead_id)}">'
+    if marker not in body:
+        raise RuntimeError(f"Deployed page does not match lead_id={lead_id}")
+    if company_name and company_name not in body:
+        raise RuntimeError("Deployed page does not contain the expected company name")
 
 
 def mark_deployed(db: Path, lead_id: int, lp_url: str) -> dict:
-    verify_public_url(lp_url)
     conn = sqlite3.connect(db)
     try:
         ensure_queue_schema(conn)
+        row = conn.execute(
+            """
+            SELECT company_name
+            FROM sales_queue
+            WHERE lead_id=? AND status='READY'
+            ORDER BY queue_id DESC
+            LIMIT 1
+            """,
+            (lead_id,),
+        ).fetchone()
+        if not row:
+            raise SystemExit(f"No READY sales_queue row for lead_id={lead_id}")
+        company_name = clean(row[0])
+        verify_public_url(lp_url, lead_id, company_name)
         ts = now_iso()
         cur = conn.execute(
             """
