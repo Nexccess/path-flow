@@ -66,6 +66,7 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
         "close": 0,
         "skipped": 0,
         "blocked_invalid_email": 0,
+        "blocked_deploy_not_ready": 0,
         "blocked_send_window": 0,
     }
 
@@ -95,9 +96,15 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
             if max_sends is not None and sent_count >= max_sends:
                 break
 
+            lead_cols = {r[1] for r in conn.execute("PRAGMA table_info(leads)")}
+            if "deploy_status" not in lead_cols:
+                counts["blocked_deploy_not_ready"] += 1
+                print(f"BLOCKED\tdeploy-status-missing\t{store_id}\t{store_name}")
+                continue
+
             row = conn.execute(
                 """
-                SELECT lp_url, email, contact_status, send_allowed, human_action, sales_status
+                SELECT lp_url, deploy_status, email, contact_status, send_allowed, human_action, sales_status
                 FROM leads WHERE campaign_id=? AND store_id=?
                 """,
                 (CAMPAIGN_ID, store_id),
@@ -105,7 +112,14 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
             if not row:
                 counts["skipped"] += 1
                 continue
-            lp_url, email, contact_status, send_allowed, human_action, sales_status = row
+            lp_url, deploy_status, email, contact_status, send_allowed, human_action, sales_status = row
+            if deploy_status != "READY" or not lp_url:
+                counts["blocked_deploy_not_ready"] += 1
+                print(
+                    f"BLOCKED\tdeploy-not-ready\t{store_id}\t{store_name}\t"
+                    f"deploy_status={deploy_status or '-'}\tlp_url={'set' if lp_url else 'missing'}"
+                )
+                continue
             if human_action or not email or contact_status != "READY_EMAIL" or not send_allowed:
                 counts["skipped"] += 1
                 continue
