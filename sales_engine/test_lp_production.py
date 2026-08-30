@@ -133,6 +133,10 @@ class LPProductionE2ETest(unittest.TestCase):
         self.assertIn('<meta name="pathflow-lead-id" content="1">', html)
         self.assertIn("CUSTOMER VOICE DIAGNOSIS", html)
         self.assertIn("今回、一番変えたいのはどこですか？", html)
+        self.assertNotIn("4,500,000", html)
+        self.assertNotIn("企業規模", html)
+        self.assertNotIn("ROI ESTIMATE", html)
+        self.assertNotIn("生成AI事前診断エンジン", html)
 
         conn = sqlite3.connect(self.db)
         row = conn.execute(
