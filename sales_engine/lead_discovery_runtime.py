@@ -10,6 +10,25 @@ from screening_automation import is_portal, looks_booking_only, valid_email
 base.DEFAULT_MODEL = "hf.co/Qwen/Qwen2.5-7B-Instruct-GGUF:latest"
 
 
+# Keep long local-Ollama runs observable from PowerShell.
+_original_call_ollama = base.call_ollama
+_progress_counter = 0
+
+
+def call_ollama_with_progress(session, page, area, category, model, ollama_url):
+    global _progress_counter
+    _progress_counter += 1
+    print(f"[OLLAMA {_progress_counter}] {base.host_of(page.url)} ...", flush=True)
+    data = _original_call_ollama(session, page, area, category, model, ollama_url)
+    name = base.clean(data.get("company_name")) or "(name unknown)"
+    confidence = data.get("confidence")
+    print(f"[OLLAMA {_progress_counter}] OK  {name}  confidence={confidence}", flush=True)
+    return data
+
+
+base.call_ollama = call_ollama_with_progress
+
+
 def insert_lead_compatible(
     conn: sqlite3.Connection,
     page: base.PageData,
@@ -111,6 +130,7 @@ def insert_lead_compatible(
             ts,
         ),
     )
+    print(f"[DB] INSERT lead_id={lead_id}  {company_name}", flush=True)
     return lead_id
 
 
