@@ -1,0 +1,75 @@
+{
+  "version": "message-strategy-gallica-yokohama-v1",
+  "lead_id": 11,
+  "objective": "Gallica横浜の『技術と理論』『髪質・骨格を活かす』『説明しながら決める』Evidenceを、来店前Customer Voiceと接続して個別LPへ反映する。",
+  "primary_audience": {
+    "description": "髪型やカラーを変えたいが、自分の髪質・骨格・過去の施術履歴で何ができるか分からず、理由を聞きながら決めたい美容室利用者。"
+  },
+  "core_message": {
+    "headline_direction": "似合う理由まで、わかって選べる。自分の髪を活かすための相談から始める。",
+    "supporting_message": "Gallicaは公式に、骨格や髪質を活かすこと、理想の形・色をつくること、説明できる技術と理論を掲げている。口コミでも、ヒアリング、カラー相談、セット方法の説明、普段使うアイテムを踏まえた提案が確認できる。",
+    "tone": "技術的だが難解にしない。納得感・説明・自分の髪を理解する感覚を重視する。"
+  },
+  "proof_pillars": [
+    {
+      "id": "theory",
+      "title": "似合う形を、骨格と髪質から考える",
+      "evidence": "公式の『骨格や髪質を活かす』『説明できる技術と理論』。"
+    },
+    {
+      "id": "consultation",
+      "title": "迷っている状態から相談できる",
+      "evidence": "カラーに迷った状態から相談、普段のアイテムまで考慮したヒアリングの口コミ。"
+    },
+    {
+      "id": "reproducibility",
+      "title": "家に帰ってからの扱いやすさまで",
+      "evidence": "セット方法の説明、乾かすだけで決まる・簡単スタイリングという公式スタイル説明。"
+    },
+    {
+      "id": "specialties",
+      "title": "髪質改善・ボブ・ショート・ケアブリーチ",
+      "evidence": "Hot Pepper掲載上の店舗訴求。"
+    }
+  ],
+  "customer_voice_to_evidence_map": [
+    {
+      "customer_voice": "自分の髪質や骨格で、そのスタイルが似合うか分からない",
+      "store_evidence": "骨格や髪質を活かした理想のバランスをつくるという公式訴求",
+      "allowed_message": "参考写真だけでなく、自分の髪質・骨格・履歴を前提に相談する。",
+      "forbidden_message": "誰にでも必ず似合う"
+    },
+    {
+      "customer_voice": "カラーを決め切れない",
+      "store_evidence": "カラーに迷っている状態から相談に乗ってもらえた口コミ",
+      "allowed_message": "決め切れない部分を残したまま、希望と避けたい色を整理して相談する。",
+      "forbidden_message": "必ず理想の色になる"
+    },
+    {
+      "customer_voice": "家で同じようにセットできるか",
+      "store_evidence": "セット方法の説明と簡単スタイリングの公式スタイル説明",
+      "allowed_message": "普段使う道具やセット時間も含めて相談材料にする。",
+      "forbidden_message": "誰でも乾かすだけで必ず再現できる"
+    }
+  ],
+  "cta": {
+    "primary": "自分の髪に合う条件を整理する",
+    "secondary": "Gallica横浜の特徴を確認する",
+    "diagnosis_role": "店舗適合スコアではなく、髪質・履歴・希望・日常スタイリング条件を整理する相談準備。"
+  },
+  "content_order": [
+    "店舗名と技術・理論ベネフィット",
+    "来店前Customer Voice",
+    "髪質・履歴・希望整理",
+    "Gallica固有Evidence",
+    "相談時に伝える要点",
+    "店舗・予約情報"
+  ],
+  "forbidden_claims": [
+    "必ず似合う",
+    "必ず髪質が改善する",
+    "失敗しない",
+    "受賞歴を結果保証として扱う",
+    "口コミを全スタッフの保証として扱う"
+  ]
+}
