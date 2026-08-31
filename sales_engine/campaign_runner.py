@@ -11,6 +11,7 @@ from graph_mail import GraphConfig, GraphMailClient
 from templates import render
 
 DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
+CAMPAIGN_ID = DEFAULT_CAMPAIGN_ID  # backward compatibility
 JST = timezone(timedelta(hours=9))
 SEND_START = time(10, 0)
 SEND_END = time(19, 0)
