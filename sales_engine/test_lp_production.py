@@ -137,6 +137,10 @@ class LPProductionE2ETest(unittest.TestCase):
         self.assertNotIn("企業規模", html)
         self.assertNotIn("ROI ESTIMATE", html)
         self.assertNotIn("生成AI事前診断エンジン", html)
+        self.assertNotIn("/* ─── SOLUTION", html)
+        self.assertNotIn("/* ─── PRICING", html)
+        self.assertNotIn("/* ─── DIAGNOSIS OVERLAY", html)
+        self.assertNotIn("#diag-overlay", html)
 
         conn = sqlite3.connect(self.db)
         row = conn.execute(
