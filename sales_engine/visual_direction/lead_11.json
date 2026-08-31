@@ -42,7 +42,12 @@
     "background": "cool white to pale gray gradient",
     "eyebrow": "GALLICA YOKOHAMA / PATH-FLOW PERSONALIZED",
     "image_direction": "将来画像を使う場合は髪のツヤ・質感・カットラインが分かる実スタイルを優先。未確認画像は追加しない。",
-    "avoid": ["Violetと同じ暖色ベージュ", "木質感の強調", "濃紺ゴールド", "高級ホテル風"]
+    "avoid": [
+      "Violetと同じ暖色ベージュ",
+      "木質感の強調",
+      "濃紺ゴールド",
+      "高級ホテル風"
+    ]
   },
   "sections": [
     {
@@ -69,5 +74,15 @@
     "VioletのVisual Directionを流用する",
     "受賞バッジ風の誇張",
     "美容医療のような効果保証表現"
-  ]
+  ],
+  "variant": {
+    "hero_variant": "technical-grid",
+    "section_order": [
+      "personalized",
+      "customer-voice"
+    ],
+    "typography_mode": "sans-technical",
+    "card_style": "structured",
+    "density": "clean"
+  }
 }
