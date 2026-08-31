@@ -46,7 +46,12 @@
     "background": "soft warm neutral gradient",
     "eyebrow": "VIOLET YOKOHAMA / PATH-FLOW PERSONALIZED",
     "image_direction": "将来写真を入れる場合は、サロン空間・髪の質感・自然光が伝わる実店舗/実スタイル写真を優先。現段階では無理に画像を追加しない。",
-    "avoid": ["濃紺全面", "金色メイン", "SaaSダッシュボード風", "企業向け数値訴求"]
+    "avoid": [
+      "濃紺全面",
+      "金色メイン",
+      "SaaSダッシュボード風",
+      "企業向け数値訴求"
+    ]
   },
   "sections": [
     {
@@ -73,5 +78,15 @@
     "高級感を出すためだけの黒背景全面使用",
     "Violet公式ロゴを無断で生成・模倣する",
     "未確認のブランドカラーを公式色として断定する"
-  ]
+  ],
+  "variant": {
+    "hero_variant": "editorial-soft",
+    "section_order": [
+      "customer-voice",
+      "personalized"
+    ],
+    "typography_mode": "serif-editorial",
+    "card_style": "soft-rounded",
+    "density": "airy"
+  }
 }
