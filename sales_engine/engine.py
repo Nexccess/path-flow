@@ -34,7 +34,7 @@ def add_event(conn, store_id: str, event_type: str, payload=None, external_messa
         VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
-            CAMPAIGN_ID,
+            campaign_id,
             store_id,
             event_type,
             now_iso(),
@@ -62,7 +62,7 @@ def mark_sent(conn, store_id: str, stage: str, at: str | None = None, campaign_i
         raise ValueError(f"Automated send blocked for store_id={store_id}, status={lead[0]}")
     conn.execute(
         f"UPDATE leads SET sales_status=?, {field}=?, updated_at=? WHERE campaign_id=? AND store_id=?",
-        (status, at, at, CAMPAIGN_ID, store_id),
+        (status, at, at, campaign_id, store_id),
     )
     add_event(conn, store_id, event_type, {"sent_at": at}, campaign_id=campaign_id)
 
@@ -76,7 +76,7 @@ def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_
             response_at=COALESCE(response_at, ?), updated_at=?
         WHERE campaign_id=? AND store_id=?
         """,
-        (response_type, at, at, CAMPAIGN_ID, store_id),
+        (response_type, at, at, campaign_id, store_id),
     )
     add_event(
         conn,
@@ -99,7 +99,7 @@ def due_actions(conn, now: datetime | None = None, campaign_id: str = DEFAULT_CA
         WHERE campaign_id=?
           AND contact_status IN ({placeholders})
         """,
-        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
+        (campaign_id, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchall()
     actions = []
     for store_id, store_name, status, initial_at, f1_at, f2_at, human_action, _contact_status in rows:
@@ -128,7 +128,7 @@ def close_no_response(conn, store_id: str, campaign_id: str = DEFAULT_CAMPAIGN_I
         SET sales_status='CLOSED_NO_RESPONSE', closed_at=?, close_reason='NO_RESPONSE', updated_at=?
         WHERE campaign_id=? AND store_id=? AND human_action=0
         """,
-        (at, at, CAMPAIGN_ID, store_id),
+        (at, at, campaign_id, store_id),
     )
     add_event(conn, store_id, "CLOSED_NO_RESPONSE", campaign_id=campaign_id)
 
@@ -137,21 +137,21 @@ def daily_summary(conn, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     result = {}
     for status, count in conn.execute(
         "SELECT sales_status, COUNT(*) FROM leads WHERE campaign_id=? GROUP BY sales_status",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ):
         result[status] = count
     result["HUMAN_ACTION"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ).fetchone()[0]
     placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     result["ACTIONABLE_CONTACTS"] = conn.execute(
         f"SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status IN ({placeholders})",
-        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
+        (campaign_id, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchone()[0]
     result["TOTAL"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=?",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ).fetchone()[0]
     return result
 
@@ -168,6 +168,7 @@ def main():
     configure_stdout()
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     p.add_argument("--summary", action="store_true")
     p.add_argument("--due", action="store_true")
     p.add_argument("--due-count", action="store_true", help="Print only the number of due actions")
@@ -175,11 +176,11 @@ def main():
     conn = sqlite3.connect(args.db)
     try:
         if args.summary:
-            print(json.dumps(daily_summary(conn), ensure_ascii=False, indent=2))
+            print(json.dumps(daily_summary(conn, args.campaign_id), ensure_ascii=False, indent=2))
         if args.due_count:
-            print(len(due_actions(conn)))
+            print(len(due_actions(conn, campaign_id=args.campaign_id)))
         elif args.due:
-            for action in due_actions(conn):
+            for action in due_actions(conn, campaign_id=args.campaign_id):
                 print("\t".join(action))
     finally:
         conn.close()
