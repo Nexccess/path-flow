@@ -363,6 +363,55 @@ def remove_legacy_b2b(rendered: str, customer_voice_html: str) -> str:
 
 
 
+
+def strip_unused_legacy_css(rendered: str) -> str:
+    """Remove CSS blocks for legacy B2B sections no longer present in product LPs."""
+    labels = [
+        "SOLUTION",
+        "FLOW",
+        "FEATURES",
+        "PRICING",
+        "DIAGNOSIS CTA",
+        "DIAGNOSIS OVERLAY",
+        "LOADING",
+        "RESULTS",
+        "BOOKING",
+        "SUCCESS",
+    ]
+    for label in labels:
+        pattern = (
+            r"/\*\s*─+\s*" + re.escape(label) +
+            r"\s*─+\s*\*/.*?(?=/\*\s*─+\s*[A-Z][A-Z ]*\s*─+\s*\*/|</style>)"
+        )
+        rendered = re.sub(pattern, "", rendered, count=1, flags=re.S)
+
+    # Remove responsive declarations that only reference deleted legacy sections.
+    legacy_selectors = [
+        ".features-grid",
+        ".solution-layout",
+        ".solution-visual",
+        ".flow-steps",
+        ".flow-arrow",
+        ".pricing-card",
+        ".pricing-running",
+        ".diag-body",
+        ".diag-checkbox-grid",
+        ".result-header",
+        ".result-cards",
+        ".result-roi",
+        ".booking-grid",
+    ]
+    for selector in legacy_selectors:
+        rendered = re.sub(
+            re.escape(selector) + r"\s*\{[^{}]*\}",
+            "",
+            rendered,
+            flags=re.S,
+        )
+
+    return rendered
+
+
 def apply_visual_direction(rendered: str, visual: dict) -> str:
     if not visual:
         return rendered
@@ -507,6 +556,7 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
 
     customer_voice_html = build_customer_voice_section(copy)
     rendered = remove_legacy_b2b(rendered, customer_voice_html)
+    rendered = strip_unused_legacy_css(rendered)
     rendered = apply_visual_direction(rendered, load_visual_direction(lead))
 
     # Product-quality guardrails: legacy B2B strings must not survive.
