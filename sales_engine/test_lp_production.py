@@ -116,14 +116,15 @@ class LPProductionE2ETest(unittest.TestCase):
             "customer_voice_version": "customer-voice-hair-v1",
         }
 
-        result = lp_production.generate(
-            self.db,
-            self.template,
-            self.output,
-            1,
-            "http://127.0.0.1:11434",
-            "qwen2.5:7b",
-        )
+        with patch.object(lp_production, "REPO_ROOT", self.root):
+            result = lp_production.generate(
+                self.db,
+                self.template,
+                self.output,
+                1,
+                "http://127.0.0.1:11434",
+                "qwen2.5:7b",
+            )
 
         self.assertEqual(result["lead_id"], 1)
         self.assertEqual(result["lp_status"], "GENERATED")
