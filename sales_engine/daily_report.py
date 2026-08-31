@@ -5,7 +5,8 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
+CAMPAIGN_ID = DEFAULT_CAMPAIGN_ID  # backward compatibility
 JST = timezone(timedelta(hours=9))
 
 
@@ -13,27 +14,27 @@ def now() -> datetime:
     return datetime.now(JST)
 
 
-def report(conn: sqlite3.Connection) -> str:
+def report(conn: sqlite3.Connection, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> str:
     total = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (campaign_id,)
     ).fetchone()[0]
     human = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1", (campaign_id,)
     ).fetchone()[0]
     sent = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND initial_sent_at IS NOT NULL", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND initial_sent_at IS NOT NULL", (campaign_id,)
     ).fetchone()[0]
     closed = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND sales_status='CLOSED_NO_RESPONSE'", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND sales_status='CLOSED_NO_RESPONSE'", (campaign_id,)
     ).fetchone()[0]
     responded = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND response_at IS NOT NULL", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND response_at IS NOT NULL", (campaign_id,)
     ).fetchone()[0]
     ready_email = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status='READY_EMAIL'", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status='READY_EMAIL'", (campaign_id,)
     ).fetchone()[0]
     ready_form = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status='READY_FORM'", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status='READY_FORM'", (campaign_id,)
     ).fetchone()[0]
 
     cutoff = (now() - timedelta(hours=24)).isoformat(timespec="seconds")
@@ -44,7 +45,7 @@ def report(conn: sqlite3.Connection) -> str:
         WHERE campaign_id=? AND human_action=1 AND response_at IS NOT NULL AND response_at <= ?
         ORDER BY response_at
         """,
-        (CAMPAIGN_ID, cutoff),
+        (campaign_id, cutoff),
     ).fetchall()
 
     today = now().date().isoformat()
@@ -53,7 +54,7 @@ def report(conn: sqlite3.Connection) -> str:
         SELECT COUNT(*) FROM leads
         WHERE campaign_id=? AND response_at IS NOT NULL AND substr(response_at,1,10)=?
         """,
-        (CAMPAIGN_ID, today),
+        (campaign_id, today),
     ).fetchone()[0]
 
     lines = [
@@ -79,10 +80,11 @@ def report(conn: sqlite3.Connection) -> str:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     args = p.parse_args()
     conn = sqlite3.connect(args.db)
     try:
-        print(report(conn))
+        print(report(conn, args.campaign_id))
     finally:
         conn.close()
 
