@@ -118,15 +118,17 @@ class LPProductionE2ETest(unittest.TestCase):
 
         result = lp_production.generate(
             self.db,
-            1,
             self.template,
             self.output,
+            1,
             "http://127.0.0.1:11434",
             "qwen2.5:7b",
         )
 
         self.assertEqual(result["lead_id"], 1)
         self.assertEqual(result["lp_status"], "GENERATED")
+        self.assertEqual(result["qa_status"], "PASS")
+        self.assertEqual(result["quality_status"], "QA_PASS")
         html = (self.output / "1" / "index.html").read_text(encoding="utf-8")
         self.assertIn("テストネイル", html)
         self.assertIn("予約につながる導線", html)
@@ -149,7 +151,7 @@ class LPProductionE2ETest(unittest.TestCase):
         conn.close()
         self.assertEqual(row, ("GENERATED", "PENDING", None))
 
-    @patch("lp_production.verify_public_url")
+    @patch("lp_production.verify_deployed")
     def test_lp_url_is_saved_only_after_deploy_verification(self, verify):
         lp_production.ensure_queue_schema(sqlite3.connect(self.db))
         result = lp_production.mark_deployed(
