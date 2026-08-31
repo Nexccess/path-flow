@@ -705,6 +705,9 @@ def final_qa(rendered: str, lead: dict, copy: dict) -> dict:
         if re.search(pattern, rendered):
             errors.append(label)
 
+    if "<body\\1" in rendered:
+        errors.append("malformed visual variant body tag")
+
     if rendered.count("<style") != rendered.count("</style>"):
         errors.append("unbalanced style tags")
     if rendered.count("<section") != rendered.count("</section>"):
