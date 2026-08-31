@@ -400,10 +400,13 @@ def strip_unused_legacy_css(rendered: str) -> str:
         rendered,
         flags=re.S,
     )
-    # After removing legacy selectors from a comma-separated responsive rule,
-    # the surviving `.pain-grid` selector can be left without a declaration.
-    # Remove that orphan line rather than emitting invalid CSS.
-    rendered = re.sub(r"(?m)^\s*\.pain-grid\s*$\n", "", rendered)
+
+    # Remove trailing selector fragments left inside responsive blocks after
+    # legacy selector deletion. They have no declaration body and are invalid.
+    rendered = re.sub(r"(?m)^\s*\.pain-grid\s*,?\s*$\n?", "", rendered)
+    rendered = re.sub(r"(?m)^\s*\.flow-steps(?:::before)?\s*,?\s*$\n?", "", rendered)
+    rendered = re.sub(r"(?m)^\s*[^@{}\n][^{}\n]*,\s*$\n(?=\s*\})", "", rendered)
+
     rendered = re.sub(r"(?m)^\s*$\n(?=\s*$\n)", "", rendered)
     return rendered
 
@@ -515,7 +518,6 @@ footer {{
     return rendered
 
 
-
 def final_qa(rendered: str, lead: dict, copy: dict) -> dict:
     """Fail closed when a generated LP is not ready to become a baseline artifact."""
     errors: list[str] = []
@@ -584,7 +586,6 @@ def final_qa(rendered: str, lead: dict, copy: dict) -> dict:
     if rendered.count("<section") != rendered.count("</section>"):
         errors.append("unbalanced section tags")
 
-    # Product-quality inputs must be present for the baseline sample.
     if lead_id == 9:
         if not store_intelligence:
             errors.append("lead 9 store intelligence missing")
@@ -665,7 +666,6 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
     rendered = remove_legacy_b2b(rendered, customer_voice_html)
     rendered = strip_unused_legacy_css(rendered)
     rendered = apply_visual_direction(rendered, load_visual_direction(lead))
-
     final_qa(rendered, lead, copy)
     return rendered
 
