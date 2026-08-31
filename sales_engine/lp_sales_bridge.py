@@ -64,6 +64,21 @@ def source_rows(conn: sqlite3.Connection, lead_ids: list[int] | None) -> list[sq
 
 def ensure_target_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+    lead_cols = table_columns(conn, "leads")
+    additions = {
+        "lp_url": "TEXT",
+        "deploy_status": "TEXT",
+        "screening_status": "TEXT NOT NULL DEFAULT 'PENDING'",
+        "sales_status": "TEXT NOT NULL DEFAULT 'READY'",
+        "contact_status": "TEXT NOT NULL DEFAULT 'PENDING'",
+        "send_allowed": "INTEGER NOT NULL DEFAULT 0",
+        "human_action": "INTEGER NOT NULL DEFAULT 0",
+        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    }
+    for name, spec in additions.items():
+        if name not in lead_cols:
+            conn.execute(f"ALTER TABLE leads ADD COLUMN {name} {spec}")
+    conn.commit()
 
 
 def sync(
