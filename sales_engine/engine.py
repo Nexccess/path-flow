@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
 ACTIONABLE_CONTACT_STATUSES = {
     "READY_EMAIL",
@@ -26,7 +26,7 @@ def parse_dt(value: str | None):
     return datetime.fromisoformat(value) if value else None
 
 
-def add_event(conn, store_id: str, event_type: str, payload=None, external_message_id=None):
+def add_event(conn, store_id: str, event_type: str, payload=None, external_message_id=None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     conn.execute(
         """
         INSERT OR IGNORE INTO events
@@ -44,7 +44,7 @@ def add_event(conn, store_id: str, event_type: str, payload=None, external_messa
     )
 
 
-def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
+def mark_sent(conn, store_id: str, stage: str, at: str | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = at or now_iso()
     mapping = {
         "initial": ("SENT", "initial_sent_at", "DM_INITIAL_SENT"),
@@ -54,7 +54,7 @@ def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
     status, field, event_type = mapping[stage]
     lead = conn.execute(
         "SELECT sales_status, human_action FROM leads WHERE campaign_id=? AND store_id=?",
-        (CAMPAIGN_ID, store_id),
+        (campaign_id, store_id),
     ).fetchone()
     if not lead:
         raise ValueError(f"Unknown store_id: {store_id}")
@@ -64,10 +64,10 @@ def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
         f"UPDATE leads SET sales_status=?, {field}=?, updated_at=? WHERE campaign_id=? AND store_id=?",
         (status, at, at, CAMPAIGN_ID, store_id),
     )
-    add_event(conn, store_id, event_type, {"sent_at": at})
+    add_event(conn, store_id, event_type, {"sent_at": at}, campaign_id=campaign_id)
 
 
-def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_message_id=None):
+def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_message_id=None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = now_iso()
     conn.execute(
         """
@@ -84,10 +84,11 @@ def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_
         "RESPONSE_RECEIVED",
         {"response_type": response_type},
         external_message_id=external_message_id,
+        campaign_id=campaign_id,
     )
 
 
-def due_actions(conn, now: datetime | None = None):
+def due_actions(conn, now: datetime | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     now = now or datetime.now(JST)
     placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     rows = conn.execute(
@@ -119,7 +120,7 @@ def due_actions(conn, now: datetime | None = None):
     return actions
 
 
-def close_no_response(conn, store_id: str):
+def close_no_response(conn, store_id: str, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = now_iso()
     conn.execute(
         """
@@ -129,10 +130,10 @@ def close_no_response(conn, store_id: str):
         """,
         (at, at, CAMPAIGN_ID, store_id),
     )
-    add_event(conn, store_id, "CLOSED_NO_RESPONSE")
+    add_event(conn, store_id, "CLOSED_NO_RESPONSE", campaign_id=campaign_id)
 
 
-def daily_summary(conn):
+def daily_summary(conn, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     result = {}
     for status, count in conn.execute(
         "SELECT sales_status, COUNT(*) FROM leads WHERE campaign_id=? GROUP BY sales_status",
