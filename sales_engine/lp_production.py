@@ -515,6 +515,98 @@ footer {{
     return rendered
 
 
+
+def final_qa(rendered: str, lead: dict, copy: dict) -> dict:
+    """Fail closed when a generated LP is not ready to become a baseline artifact."""
+    errors: list[str] = []
+    lead_id = int(lead["lead_id"])
+    company = str(lead.get("company_name") or "")
+    store_intelligence = load_store_intelligence(lead)
+    message_strategy = load_message_strategy(lead)
+    visual_direction = load_visual_direction(lead)
+
+    required_fragments = [
+        f'<meta name="pathflow-lead-id" content="{lead_id}">',
+        company,
+        'id="customer-voice"',
+        "CUSTOMER VOICE",
+        'id="personalized"',
+    ]
+    if visual_direction:
+        required_fragments.append('id="pathflow-visual-direction"')
+
+    missing = [fragment for fragment in required_fragments if fragment not in rendered]
+    if missing:
+        errors.append("missing required fragments: " + ", ".join(missing))
+
+    question_count = rendered.count('<article class="pain-card">')
+    expected_questions = min(5, len(copy.get("diagnostic_questions") or []))
+    if expected_questions < 1:
+        errors.append("customer voice questions are empty")
+    elif question_count != expected_questions:
+        errors.append(
+            f"customer voice question count mismatch: expected={expected_questions}, actual={question_count}"
+        )
+
+    forbidden_terms = [
+        "4,500,000",
+        "ROI ESTIMATE",
+        "適合スコア",
+        "企業規模",
+        "導入検討時期",
+        "生成AI事前診断エンジン",
+        "集客から予約確定まで、",
+        "#diag-overlay",
+        "/* ─── SOLUTION",
+        "/* ─── FLOW",
+        "/* ─── FEATURES",
+        "/* ─── PRICING",
+        "/* ─── DIAGNOSIS CTA",
+        "/* ─── DIAGNOSIS OVERLAY",
+        "/* ─── RESULTS",
+        "/* ─── BOOKING",
+    ]
+    leaked = [term for term in forbidden_terms if term in rendered]
+    if leaked:
+        errors.append("legacy B2B remnants: " + ", ".join(leaked))
+
+    orphan_patterns = {
+        "orphan pain-grid selector": r"(?m)^\s*\.pain-grid\s*,?\s*$",
+        "orphan flow selector": r"(?m)^\s*\.flow-steps(?:::before)?\s*,?\s*$",
+        "empty selector before media close": r"(?m)^\s*[^@{}][^{}]*,\s*\n\s*\}",
+    }
+    for label, pattern in orphan_patterns.items():
+        if re.search(pattern, rendered):
+            errors.append(label)
+
+    if rendered.count("<style") != rendered.count("</style>"):
+        errors.append("unbalanced style tags")
+    if rendered.count("<section") != rendered.count("</section>"):
+        errors.append("unbalanced section tags")
+
+    # Product-quality inputs must be present for the baseline sample.
+    if lead_id == 9:
+        if not store_intelligence:
+            errors.append("lead 9 store intelligence missing")
+        if not message_strategy:
+            errors.append("lead 9 message strategy missing")
+        if not visual_direction:
+            errors.append("lead 9 visual direction missing")
+        if "VIOLET YOKOHAMA / PATH-FLOW PERSONALIZED" not in rendered:
+            errors.append("lead 9 visual eyebrow missing")
+
+    if errors:
+        raise RuntimeError("FINAL_QA_FAILED: " + " | ".join(errors))
+
+    return {
+        "status": "PASS",
+        "question_count": question_count,
+        "store_intelligence": bool(store_intelligence),
+        "message_strategy": bool(message_strategy),
+        "visual_direction": bool(visual_direction),
+    }
+
+
 def render_html(template: str, lead: dict, copy: dict) -> str:
     company = html.escape(lead["company_name"])
     marker = (
@@ -574,18 +666,7 @@ def render_html(template: str, lead: dict, copy: dict) -> str:
     rendered = strip_unused_legacy_css(rendered)
     rendered = apply_visual_direction(rendered, load_visual_direction(lead))
 
-    forbidden = [
-        "4,500,000",
-        "ROI ESTIMATE",
-        "適合スコア",
-        "企業規模",
-        "導入検討時期",
-        "集客から予約確定まで、",
-    ]
-    leaked = [term for term in forbidden if term in rendered]
-    if leaked:
-        raise RuntimeError("Legacy B2B content remains: " + ", ".join(leaked))
-
+    final_qa(rendered, lead, copy)
     return rendered
 
 
@@ -603,6 +684,7 @@ def generate(
         copy = generate_copy(lead, ollama_url, model)
         template = template_path.read_text(encoding="utf-8")
         rendered = render_html(template, lead, copy)
+        qa = final_qa(rendered, lead, copy)
         out_dir = output_root / str(lead["lead_id"])
         out_dir.mkdir(parents=True, exist_ok=True)
         out_file = out_dir / "index.html"
@@ -629,6 +711,9 @@ def generate(
             "lp_path": rel_path,
             "lp_status": "GENERATED",
             "deploy_status": "PENDING",
+            "qa_status": qa["status"],
+            "qa_question_count": qa["question_count"],
+            "quality_status": "BASELINE_FINAL" if int(lead["lead_id"]) == 9 else "QA_PASS",
             "version": VERSION,
         }
     except Exception as exc:
