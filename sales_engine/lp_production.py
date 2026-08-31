@@ -411,102 +411,226 @@ def strip_unused_legacy_css(rendered: str) -> str:
     return rendered
 
 
+def reorder_visual_sections(rendered: str, section_order: list[str]) -> str:
+    """Reorder known product sections without changing their internal markup."""
+    known = ["personalized", "customer-voice"]
+    requested = [x for x in section_order if x in known]
+    if len(requested) < 2 or len(set(requested)) != len(requested):
+        return rendered
+
+    blocks: dict[str, str] = {}
+    spans: list[tuple[int, int]] = []
+    for section_id in known:
+        match = re.search(
+            rf'<section id="{re.escape(section_id)}">.*?</section>',
+            rendered,
+            flags=re.S,
+        )
+        if not match:
+            return rendered
+        blocks[section_id] = match.group(0)
+        spans.append((match.start(), match.end()))
+
+    start = min(x[0] for x in spans)
+    end = max(x[1] for x in spans)
+    ordered = "\n\n".join(blocks[x] for x in requested)
+    for section_id in known:
+        if section_id not in requested:
+            ordered += "\n\n" + blocks[section_id]
+    return rendered[:start] + ordered + rendered[end:]
+
+
 def apply_visual_direction(rendered: str, visual: dict) -> str:
     if not visual:
         return rendered
 
     palette = visual.get("palette") or {}
+    shape = visual.get("shape") or {}
+    spacing = visual.get("spacing") or {}
+    variant = visual.get("variant") or {}
+    typography = visual.get("typography") or {}
+    hero = visual.get("hero") or {}
+
+    hero_variant = str(variant.get("hero_variant") or "editorial-soft")
+    typography_mode = str(variant.get("typography_mode") or "serif-editorial")
+    card_style = str(variant.get("card_style") or "soft-rounded")
+    density = str(variant.get("density") or spacing.get("density") or "airy")
+    section_order = variant.get("section_order") or ["personalized", "customer-voice"]
+
+    rendered = reorder_visual_sections(rendered, list(section_order))
+
+    attrs = (
+        f' data-pf-hero="{html.escape(hero_variant)}"'
+        f' data-pf-type="{html.escape(typography_mode)}"'
+        f' data-pf-cards="{html.escape(card_style)}"'
+        f' data-pf-density="{html.escape(density)}"'
+    )
+    rendered = re.sub(r"<body(?![^>]*data-pf-hero)([^>]*)>", rf"<body\\1{attrs}>", rendered, count=1)
+
+    bg = palette.get("background", "#F5F1EA")
+    surface = palette.get("surface", "#FFFDFC")
+    surface_alt = palette.get("surface_alt", "#ECE5DA")
+    text = palette.get("text", "#211F1C")
+    muted = palette.get("muted", "#746E67")
+    accent = palette.get("accent", "#6D5B8C")
+    accent_soft = palette.get("accent_soft", "#D8CFE7")
+    line = palette.get("line", "#CFC5B8")
+    black_frame = palette.get("black_frame", "#1C1B1A")
+    radius = shape.get("radius", "16px")
+    border = shape.get("border", "1px solid rgba(33,31,28,.14)")
+    shadow = shape.get("shadow", "0 18px 50px rgba(33,31,28,.08)")
+    section_y = spacing.get("section_y", "clamp(72px, 9vw, 120px)")
+    content_max = spacing.get("content_max", "1120px")
+
+    if hero_variant == "technical-grid":
+        hero_background = (
+            f"linear-gradient(180deg,{surface} 0%,{bg} 100%)"
+        )
+        hero_bg = (
+            "linear-gradient(rgba(62,111,120,.055) 1px, transparent 1px),"
+            "linear-gradient(90deg, rgba(62,111,120,.055) 1px, transparent 1px),"
+            f"linear-gradient(180deg,{surface} 0%,{bg} 100%)"
+        )
+        hero_extra = """
+#hero { align-items:stretch; }
+.hero-title { max-width:900px; font-weight:650; }
+.hero-sub { max-width:760px; }
+.hero-grid { opacity:.28; background-size:48px 48px; mask-image:none; }
+.hero-stats { border-top:1px solid var(--border); padding-top:1.1rem; }
+"""
+    else:
+        hero_background = f"linear-gradient(145deg,{surface} 0%,{bg} 56%,{surface_alt} 100%)"
+        hero_bg = (
+            f"radial-gradient(ellipse 45% 55% at 78% 30%, {accent_soft}55 0%, transparent 70%),"
+            f"radial-gradient(ellipse 55% 65% at 20% 85%, {line}55 0%, transparent 70%),"
+            f"linear-gradient(145deg,{surface} 0%,{bg} 100%)"
+        )
+        hero_extra = """
+.hero-title { max-width:780px; letter-spacing:-.02em; }
+.hero-sub { max-width:650px; }
+.hero-grid { opacity:.12; }
+"""
+
+    if typography_mode == "sans-technical":
+        heading_family = "'DM Sans','Noto Sans JP',sans-serif"
+        title_weight = "650"
+        label_spacing = ".14em"
+    else:
+        heading_family = "'Noto Serif JP',serif"
+        title_weight = "700"
+        label_spacing = ".18em"
+
+    if card_style == "structured":
+        card_radius = "4px"
+        card_shadow = "none"
+        card_border = f"1px solid {line}"
+        card_extra = "border-left:3px solid var(--gold);"
+    else:
+        card_radius = radius
+        card_shadow = shadow
+        card_border = border
+        card_extra = ""
+
+    if density == "compact":
+        card_padding = "1.7rem"
+        grid_gap = ".75rem"
+        section_scale = ".82"
+    elif density == "clean":
+        card_padding = "2rem"
+        grid_gap = "1rem"
+        section_scale = ".92"
+    else:
+        card_padding = "2.5rem"
+        grid_gap = "1rem"
+        section_scale = "1"
+
     css = f"""
 <style id="pathflow-visual-direction">
 :root {{
-  --navy: {palette.get("background", "#F5F1EA")};
-  --navy-mid: {palette.get("surface", "#FFFDFC")};
-  --navy-light: {palette.get("surface_alt", "#ECE5DA")};
-  --gold: {palette.get("accent", "#6D5B8C")};
-  --gold-dim: {palette.get("line", "#CFC5B8")};
-  --gold-light: {palette.get("accent_soft", "#D8CFE7")};
-  --white: {palette.get("text", "#211F1C")};
-  --muted: {palette.get("muted", "#746E67")};
-  --border: rgba(33,31,28,.14);
-  --glass: rgba(255,253,252,.88);
-  --crimson: {palette.get("accent", "#6D5B8C")};
+  --navy: {bg};
+  --navy-mid: {surface};
+  --navy-light: {surface_alt};
+  --gold: {accent};
+  --gold-dim: {line};
+  --gold-light: {accent_soft};
+  --white: {text};
+  --muted: {muted};
+  --border: {line};
+  --glass: {surface}e6;
+  --crimson: {accent};
+  --black-frame: {black_frame};
 }}
-body {{
-  background: var(--navy);
-  color: var(--white);
+body {{ background:var(--navy); color:var(--white); }}
+body::before {{ opacity:.12; }}
+.section-inner {{ max-width:{content_max}; }}
+.section-title, .hero-title, .footer-logo {{
+  font-family:{heading_family};
+  font-weight:{title_weight};
 }}
-body::before {{ opacity: .18; }}
+.section-label {{ letter-spacing:{label_spacing}; }}
 nav.scrolled {{
-  background: rgba(255,253,252,.9);
-  backdrop-filter: blur(18px);
+  background:{surface}e8;
+  backdrop-filter:blur(18px);
 }}
-.nav-logo, .nav-logo-mark, .section-label {{ color: var(--gold); }}
-.nav-logo-mark {{ border-color: var(--gold-dim); }}
+.nav-logo, .nav-logo-mark, .section-label {{ color:var(--gold); }}
+.nav-logo-mark {{ border-color:var(--gold-dim); }}
 #hero {{
-  min-height: 82vh;
-  background: linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 56%,#ECE5DA 100%);
+  min-height:82vh;
+  background:{hero_background};
 }}
-.hero-bg {{
-  background:
-    radial-gradient(ellipse 45% 55% at 78% 30%, rgba(109,91,140,.10) 0%, transparent 70%),
-    radial-gradient(ellipse 55% 65% at 20% 85%, rgba(207,197,184,.32) 0%, transparent 70%),
-    linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 100%);
-}}
-.hero-grid {{ opacity: .12; }}
-.hero-title {{ max-width: 780px; letter-spacing: -.02em; }}
-.hero-sub {{ max-width: 650px; color: var(--muted); }}
+.hero-bg {{ background:{hero_bg}; }}
+{hero_extra}
 .btn-primary {{
-  background: var(--black-frame, #1C1B1A);
-  color: #FFFDFC;
-  border-radius: 999px;
-  padding-inline: 1.6rem;
+  background:var(--black-frame);
+  color:{surface};
+  border-radius:{'6px' if card_style == 'structured' else '999px'};
+  padding-inline:1.6rem;
 }}
-.btn-primary:hover {{ background: #2A2825; }}
-.btn-secondary, .nav-links a {{ color: #5F5953; }}
+.btn-primary:hover {{ opacity:.9; }}
+.btn-secondary, .nav-links a {{ color:var(--muted); }}
 .nav-cta {{
-  border-color: #1C1B1A;
-  color: #1C1B1A;
-  border-radius: 999px;
+  border-color:var(--black-frame);
+  color:var(--black-frame);
+  border-radius:{'6px' if card_style == 'structured' else '999px'};
 }}
-.nav-cta:hover {{ background:#1C1B1A; color:#FFFDFC; }}
+.nav-cta:hover {{ background:var(--black-frame); color:{surface}; }}
 #personalized, #customer-voice {{
-  padding: clamp(72px, 9vw, 120px) 0;
+  padding:calc({section_y} * {section_scale}) 0;
 }}
-#personalized {{ background:#FFFDFC; }}
-#customer-voice {{ background:#F5F1EA; }}
+#personalized {{ background:{surface}; }}
+#customer-voice {{ background:{surface_alt}; }}
 #customer-voice .pain-grid {{
-  gap: 1rem;
-  border: 0;
+  gap:{grid_gap};
+  border:0;
 }}
 #customer-voice .pain-card {{
-  background:#FFFDFC;
-  border:1px solid rgba(33,31,28,.10);
-  border-radius:16px;
-  box-shadow:0 18px 50px rgba(33,31,28,.06);
+  background:{surface};
+  border:{card_border};
+  border-radius:{card_radius};
+  box-shadow:{card_shadow};
+  padding:{card_padding};
+  {card_extra}
 }}
 #customer-voice .pain-num {{
   font-size:.72rem;
-  color:#8C7FA8;
+  color:var(--gold);
   margin-bottom:.9rem;
   letter-spacing:.16em;
 }}
 #customer-voice .pain-title {{
-  font-family: var(--font-serif);
+  font-family:{heading_family};
   font-size:1.08rem;
   line-height:1.65;
 }}
-footer {{
-  background:#1C1B1A;
-  color:#F5F1EA;
-}}
-.footer-copy {{ color:#CFC5B8; }}
+footer {{ background:var(--black-frame); color:{bg}; }}
+.footer-copy {{ color:{line}; }}
 </style>
 """
     if "</head>" not in rendered:
         raise RuntimeError("HTML head boundary could not be identified.")
     rendered = rendered.replace("</head>", css + "\n</head>", 1)
 
-    eyebrow = ((visual.get("hero") or {}).get("eyebrow") or "").strip()
+    eyebrow = str(hero.get("eyebrow") or "").strip()
     if eyebrow:
         rendered = re.sub(
             r'<div class="hero-eyebrow">.*?</div>',
