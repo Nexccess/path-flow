@@ -400,7 +400,10 @@ def strip_unused_legacy_css(rendered: str) -> str:
         rendered,
         flags=re.S,
     )
-    rendered = re.sub(r"\.pain-grid\s*,\s*(?=\n|\r\n)", ".pain-grid ", rendered)
+    # After removing legacy selectors from a comma-separated responsive rule,
+    # the surviving `.pain-grid` selector can be left without a declaration.
+    # Remove that orphan line rather than emitting invalid CSS.
+    rendered = re.sub(r"(?m)^\s*\.pain-grid\s*$\n", "", rendered)
     rendered = re.sub(r"(?m)^\s*$\n(?=\s*$\n)", "", rendered)
     return rendered
 
@@ -513,19 +516,58 @@ footer {{
 
 
 def render_html(template: str, lead: dict, copy: dict) -> str:
-    rendered = template
-    company = html.escape(str(lead["company_name"]))
-    lead_id = int(lead["lead_id"])
+    company = html.escape(lead["company_name"])
     marker = (
-        f'<meta name="pathflow-lead-id" content="{lead_id}">\n'
+        f'<meta name="pathflow-lead-id" content="{int(lead["lead_id"])}">\n'
         f'<meta name="pathflow-company" content="{company}">'
     )
-    rendered = rendered.replace("</title>", "</title>\n" + marker, 1)
-    rendered = re.sub(r"<title>.*?</title>", f"<title>{company}様向け Path-Flow 個別提案 | Nexccess</title>", rendered, count=1, flags=re.S)
-    rendered = re.sub(r'<meta name="description" content="[^"]*">', f'<meta name="description" content="{html.escape(str(copy["subheadline"]))}">', rendered, count=1)
-    rendered = re.sub(r'<div class="hero-eyebrow">.*?</div>', f'<div class="hero-eyebrow">{html.escape(str(copy["eyebrow"]))}</div>', rendered, count=1, flags=re.S)
-    rendered = re.sub(r'<h1 class="hero-title">.*?</h1>', f'<h1 class="hero-title">\n    {html.escape(str(copy["headline"]))}\n  </h1>', rendered, count=1, flags=re.S)
-    rendered = re.sub(r'<p class="hero-sub">.*?</p>', f'<p class="hero-sub">{html.escape(str(copy["subheadline"]))}</p>', rendered, count=1, flags=re.S)
+
+    rendered = template.replace("{{LEAD_ID}}", str(lead["lead_id"]))
+    rendered = rendered.replace("{{COMPANY_NAME}}", company)
+    rendered = rendered.replace("{{LP_EYEBROW}}", html.escape(str(copy["eyebrow"])))
+    rendered = rendered.replace("{{LP_HEADLINE}}", html.escape(str(copy["headline"])))
+    rendered = rendered.replace("{{LP_SUBHEADLINE}}", html.escape(str(copy["subheadline"])))
+    rendered = rendered.replace("{{LP_DIAGNOSIS}}", html.escape(str(copy["diagnosis"])))
+    rendered = rendered.replace("{{LP_STRENGTH}}", html.escape(str(copy["strength"])))
+
+    if '<meta name="pathflow-lead-id"' not in rendered:
+        rendered = rendered.replace("</title>", f"</title>\n{marker}", 1)
+
+    rendered = re.sub(
+        r'<title>.*?</title>',
+        f'<title>{company}様向け Path-Flow 個別提案 | Nexccess</title>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<meta name="description" content=".*?">',
+        f'<meta name="description" content="{html.escape(str(copy["subheadline"]))}">',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<div class="hero-eyebrow">.*?</div>',
+        f'<div class="hero-eyebrow">{html.escape(str(copy["eyebrow"]))}</div>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<h1 class="hero-title">.*?</h1>',
+        f'<h1 class="hero-title">{html.escape(str(copy["headline"]))}</h1>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
+    rendered = re.sub(
+        r'<p class="hero-sub">.*?</p>',
+        f'<p class="hero-sub">{html.escape(str(copy["subheadline"]))}</p>',
+        rendered,
+        count=1,
+        flags=re.S,
+    )
 
     customer_voice_html = build_customer_voice_section(copy)
     rendered = remove_legacy_b2b(rendered, customer_voice_html)
@@ -551,97 +593,109 @@ def generate(
     db_path: Path,
     template_path: Path,
     output_root: Path,
+    lead_id: int | None,
     ollama_url: str,
     model: str,
-    lead_id: int | None = None,
 ) -> dict:
     conn = sqlite3.connect(db_path)
-    lead = load_go_lead(conn, lead_id=lead_id)
-    copy = generate_copy(lead, ollama_url, model)
-    template = template_path.read_text(encoding="utf-8")
-    rendered = render_html(template, lead, copy)
-    lead_dir = output_root / str(lead["lead_id"])
-    lead_dir.mkdir(parents=True, exist_ok=True)
-    out_path = lead_dir / "index.html"
-    out_path.write_text(rendered, encoding="utf-8")
-    rel_path = out_path.relative_to(REPO_ROOT).as_posix()
-    conn.execute(
-        """
-        UPDATE sales_queue
-        SET lp_status='GENERATED', lp_path=?, deploy_status='PENDING',
-            lp_url=NULL, generated_at=?, deployed_at=NULL,
-            lp_version=?, last_error=NULL
-        WHERE lead_id=?
-        """,
-        (rel_path, now_iso(), VERSION, lead["lead_id"]),
-    )
-    conn.commit()
-    result = {
-        "lead_id": lead["lead_id"],
-        "campaign_id": lead["campaign_id"],
-        "company_name": lead["company_name"],
-        "lp_path": rel_path,
-        "lp_status": "GENERATED",
-        "deploy_status": "PENDING",
-        "version": VERSION,
-    }
-    conn.close()
-    return result
+    try:
+        lead = load_go_lead(conn, lead_id)
+        copy = generate_copy(lead, ollama_url, model)
+        template = template_path.read_text(encoding="utf-8")
+        rendered = render_html(template, lead, copy)
+        out_dir = output_root / str(lead["lead_id"])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "index.html"
+        out_file.write_text(rendered, encoding="utf-8")
+        rel_path = out_file.relative_to(REPO_ROOT).as_posix()
+        conn.execute(
+            """
+            UPDATE sales_queue
+               SET lp_status='GENERATED',
+                   lp_path=?,
+                   deploy_status='PENDING',
+                   generated_at=?,
+                   lp_version=?,
+                   last_error=NULL
+             WHERE queue_id=?
+            """,
+            (rel_path, now_iso(), VERSION, lead["queue_id"]),
+        )
+        conn.commit()
+        return {
+            "lead_id": lead["lead_id"],
+            "campaign_id": lead["campaign_id"],
+            "company_name": lead["company_name"],
+            "lp_path": rel_path,
+            "lp_status": "GENERATED",
+            "deploy_status": "PENDING",
+            "version": VERSION,
+        }
+    except Exception as exc:
+        if "lead" in locals():
+            conn.execute(
+                "UPDATE sales_queue SET lp_status='ERROR', deploy_status='ERROR', last_error=? WHERE queue_id=?",
+                (str(exc)[:1000], lead["queue_id"]),
+            )
+            conn.commit()
+        raise
+    finally:
+        conn.close()
 
 
-def verify_deployed_page(lp_url: str, lead_id: int, company_name: str) -> None:
-    res = requests.get(lp_url, timeout=30)
+def verify_deployed(url: str, lead_id: int, company_name: str) -> None:
+    res = requests.get(url, timeout=30)
     res.raise_for_status()
-    marker = f'<meta name="pathflow-lead-id" content="{lead_id}">'
-    if marker not in res.text or company_name not in res.text:
+    body = res.text
+    expected_marker = f'<meta name="pathflow-lead-id" content="{int(lead_id)}">'
+    if expected_marker not in body or company_name not in body:
         raise RuntimeError(f"Deployed page does not match lead_id={lead_id}")
 
 
 def mark_deployed(db_path: Path, lead_id: int, lp_url: str) -> dict:
     conn = sqlite3.connect(db_path)
-    ensure_queue_schema(conn)
-    row = conn.execute(
-        "SELECT company_name FROM sales_queue WHERE lead_id=?", (lead_id,)
-    ).fetchone()
-    if not row:
-        raise SystemExit(f"Lead {lead_id} not found in sales_queue.")
-    company_name = row[0]
-    verify_deployed_page(lp_url, lead_id, company_name)
-    conn.execute(
-        """
-        UPDATE sales_queue
-        SET lp_status='DEPLOYED', deploy_status='READY', lp_url=?,
-            deployed_at=?, lp_version=?, last_error=NULL
-        WHERE lead_id=?
-        """,
-        (lp_url, now_iso(), VERSION, lead_id),
-    )
-    conn.commit()
-    conn.close()
-    return {
-        "lead_id": lead_id,
-        "company_name": company_name,
-        "lp_url": lp_url,
-        "lp_status": "DEPLOYED",
-        "deploy_status": "READY",
-        "version": VERSION,
-    }
+    try:
+        ensure_queue_schema(conn)
+        row = conn.execute(
+            "SELECT queue_id, company_name FROM sales_queue WHERE lead_id=? ORDER BY queue_id DESC LIMIT 1",
+            (lead_id,),
+        ).fetchone()
+        if not row:
+            raise SystemExit(f"Lead {lead_id} is not in sales_queue")
+        queue_id, company_name = row
+        verify_deployed(lp_url, lead_id, company_name)
+        conn.execute(
+            """
+            UPDATE sales_queue
+               SET lp_status='DEPLOYED',
+                   deploy_status='READY',
+                   lp_url=?,
+                   deployed_at=?,
+                   last_error=NULL
+             WHERE queue_id=?
+            """,
+            (lp_url, now_iso(), queue_id),
+        )
+        conn.commit()
+        return {"lead_id": lead_id, "lp_url": lp_url, "deploy_status": "READY"}
+    finally:
+        conn.close()
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Path-Flow LP Production E2E bridge")
+    p = argparse.ArgumentParser(description="Generate or verify a Path-Flow LP for one GO lead")
     p.add_argument("--db", type=Path, default=DEFAULT_DB)
     p.add_argument("--template", type=Path, default=DEFAULT_TEMPLATE)
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    p.add_argument("--lead-id", type=int)
     p.add_argument("--ollama-url", default=DEFAULT_OLLAMA_URL)
     p.add_argument("--model", default=DEFAULT_MODEL)
-    p.add_argument("--lead-id", type=int)
     p.add_argument("--mark-deployed", action="store_true")
     p.add_argument("--lp-url")
     return p.parse_args()
 
 
-def main() -> None:
+def main() -> int:
     args = parse_args()
     if args.mark_deployed:
         if args.lead_id is None or not args.lp_url:
@@ -652,12 +706,13 @@ def main() -> None:
             args.db,
             args.template,
             args.output,
+            args.lead_id,
             args.ollama_url,
             args.model,
-            lead_id=args.lead_id,
         )
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
