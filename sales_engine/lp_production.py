@@ -465,7 +465,7 @@ def apply_visual_direction(rendered: str, visual: dict) -> str:
         f' data-pf-cards="{html.escape(card_style)}"'
         f' data-pf-density="{html.escape(density)}"'
     )
-    rendered = re.sub(r"<body(?![^>]*data-pf-hero)([^>]*)>", rf"<body\\1{attrs}>", rendered, count=1)
+    rendered = re.sub(r"<body(?![^>]*data-pf-hero)([^>]*)>", lambda m: f"<body{m.group(1)}{attrs}>", rendered, count=1)
 
     bg = palette.get("background", "#F5F1EA")
     surface = palette.get("surface", "#FFFDFC")
