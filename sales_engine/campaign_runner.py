@@ -10,7 +10,7 @@ from engine import close_no_response, due_actions, mark_sent
 from graph_mail import GraphConfig, GraphMailClient
 from templates import render
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
 SEND_START = time(10, 0)
 SEND_END = time(19, 0)
@@ -57,7 +57,7 @@ def within_send_window(now: datetime | None = None) -> bool:
     return SEND_START <= current <= SEND_END
 
 
-def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
+def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> dict:
     conn = sqlite3.connect(db)
     counts = {
         "initial": 0,
@@ -81,12 +81,12 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
 
     client = GraphMailClient(GraphConfig.from_env()) if live else None
     try:
-        actions = due_actions(conn)
+        actions = due_actions(conn, campaign_id=campaign_id)
         sent_count = 0
         for store_id, store_name, stage in actions:
             if stage == "close":
                 if live:
-                    close_no_response(conn, store_id)
+                    close_no_response(conn, store_id, campaign_id=campaign_id)
                     conn.commit()
                 else:
                     print(f"DRY-RUN\tclose\t{store_id}\t{store_name}")
@@ -107,7 +107,7 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
                 SELECT lp_url, deploy_status, email, contact_status, send_allowed, human_action, sales_status
                 FROM leads WHERE campaign_id=? AND store_id=?
                 """,
-                (CAMPAIGN_ID, store_id),
+                (campaign_id, store_id),
             ).fetchone()
             if not row:
                 counts["skipped"] += 1
@@ -134,7 +134,7 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
             if live:
                 assert client is not None
                 client.send_text(email, subject, body, dry_run=False)
-                mark_sent(conn, store_id, stage)
+                mark_sent(conn, store_id, stage, campaign_id=campaign_id)
                 conn.commit()
             else:
                 print(f"DRY-RUN\t{stage}\t{store_id}\t{store_name}\t{email}\t{subject}")
@@ -149,10 +149,11 @@ def run(db: Path, live: bool = False, max_sends: int | None = None) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     p.add_argument("--live", action="store_true", help="Actually send mail. Omit for dry-run.")
     p.add_argument("--max-sends", type=int)
     args = p.parse_args()
-    result = run(args.db, live=args.live, max_sends=args.max_sends)
+    result = run(args.db, live=args.live, max_sends=args.max_sends, campaign_id=args.campaign_id)
     print(result)
 
 
