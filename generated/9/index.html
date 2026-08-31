@@ -272,8 +272,6 @@ footer {
   #hero { padding: 7rem 1.5rem 4rem; }
   .hero-stats { position: static; margin-top: 3rem; flex-direction: column; gap: 1.5rem; }
   .section-inner { padding: 0 1.5rem; }
-  .pain-grid, 
-
 }
 </style>
 
@@ -287,83 +285,83 @@ footer {
   --gold-light: #D8CFE7;
   --white: #211F1C;
   --muted: #746E67;
-  --border: rgba(33,31,28,.14);
-  --glass: rgba(255,253,252,.88);
+  --border: #CFC5B8;
+  --glass: #FFFDFCe6;
   --crimson: #6D5B8C;
+  --black-frame: #1C1B1A;
 }
-body {
-  background: var(--navy);
-  color: var(--white);
+body { background:var(--navy); color:var(--white); }
+body::before { opacity:.12; }
+.section-inner { max-width:1120px; }
+.section-title, .hero-title, .footer-logo {
+  font-family:'Noto Serif JP',serif;
+  font-weight:700;
 }
-body::before { opacity: .18; }
+.section-label { letter-spacing:.18em; }
 nav.scrolled {
-  background: rgba(255,253,252,.9);
-  backdrop-filter: blur(18px);
+  background:#FFFDFCe8;
+  backdrop-filter:blur(18px);
 }
-.nav-logo, .nav-logo-mark, .section-label { color: var(--gold); }
-.nav-logo-mark { border-color: var(--gold-dim); }
+.nav-logo, .nav-logo-mark, .section-label { color:var(--gold); }
+.nav-logo-mark { border-color:var(--gold-dim); }
 #hero {
-  min-height: 82vh;
-  background: linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 56%,#ECE5DA 100%);
+  min-height:82vh;
+  background:linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 56%,#ECE5DA 100%);
 }
-.hero-bg {
-  background:
-    radial-gradient(ellipse 45% 55% at 78% 30%, rgba(109,91,140,.10) 0%, transparent 70%),
-    radial-gradient(ellipse 55% 65% at 20% 85%, rgba(207,197,184,.32) 0%, transparent 70%),
-    linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 100%);
-}
-.hero-grid { opacity: .12; }
-.hero-title { max-width: 780px; letter-spacing: -.02em; }
-.hero-sub { max-width: 650px; color: var(--muted); }
+.hero-bg { background:radial-gradient(ellipse 45% 55% at 78% 30%, #D8CFE755 0%, transparent 70%),radial-gradient(ellipse 55% 65% at 20% 85%, #CFC5B855 0%, transparent 70%),linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 100%); }
+
+.hero-title { max-width:780px; letter-spacing:-.02em; }
+.hero-sub { max-width:650px; }
+.hero-grid { opacity:.12; }
+
 .btn-primary {
-  background: var(--black-frame, #1C1B1A);
-  color: #FFFDFC;
-  border-radius: 999px;
-  padding-inline: 1.6rem;
+  background:var(--black-frame);
+  color:#FFFDFC;
+  border-radius:999px;
+  padding-inline:1.6rem;
 }
-.btn-primary:hover { background: #2A2825; }
-.btn-secondary, .nav-links a { color: #5F5953; }
+.btn-primary:hover { opacity:.9; }
+.btn-secondary, .nav-links a { color:var(--muted); }
 .nav-cta {
-  border-color: #1C1B1A;
-  color: #1C1B1A;
-  border-radius: 999px;
+  border-color:var(--black-frame);
+  color:var(--black-frame);
+  border-radius:999px;
 }
-.nav-cta:hover { background:#1C1B1A; color:#FFFDFC; }
+.nav-cta:hover { background:var(--black-frame); color:#FFFDFC; }
 #personalized, #customer-voice {
-  padding: clamp(72px, 9vw, 120px) 0;
+  padding:calc(clamp(72px, 9vw, 120px) * 1) 0;
 }
 #personalized { background:#FFFDFC; }
-#customer-voice { background:#F5F1EA; }
+#customer-voice { background:#ECE5DA; }
 #customer-voice .pain-grid {
-  gap: 1rem;
-  border: 0;
+  gap:1rem;
+  border:0;
 }
 #customer-voice .pain-card {
   background:#FFFDFC;
-  border:1px solid rgba(33,31,28,.10);
+  border:1px solid rgba(33,31,28,.14);
   border-radius:16px;
-  box-shadow:0 18px 50px rgba(33,31,28,.06);
+  box-shadow:0 18px 50px rgba(33,31,28,.08);
+  padding:2.5rem;
+  
 }
 #customer-voice .pain-num {
   font-size:.72rem;
-  color:#8C7FA8;
+  color:var(--gold);
   margin-bottom:.9rem;
   letter-spacing:.16em;
 }
 #customer-voice .pain-title {
-  font-family: var(--font-serif);
+  font-family:'Noto Serif JP',serif;
   font-size:1.08rem;
   line-height:1.65;
 }
-footer {
-  background:#1C1B1A;
-  color:#F5F1EA;
-}
+footer { background:var(--black-frame); color:#F5F1EA; }
 .footer-copy { color:#CFC5B8; }
 </style>
 
 </head>
-<body>
+<body\1 data-pf-hero="editorial-soft" data-pf-type="serif-editorial" data-pf-cards="soft-rounded" data-pf-density="airy">
 
 <!-- ─── NAV ─────────────────────────────────────────────────── -->
 <nav id="nav">
@@ -390,19 +388,6 @@ footer {
   </div>
 </section>
 
-<section id="personalized">
-  <div class="section-inner">
-    <div class="section-label">STORE-SPECIFIC DIRECTION</div>
-    <h2 class="section-title">この店舗の情報を起点に、<em>来店前の迷い</em>まで整理する。</h2>
-    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
-      店舗の公開情報と顧客側の迷いを分けて整理し、相談・予約前の不安を減らす余地があります。
-    </p>
-    <p style="max-width:820px;margin-top:.75rem">
-      公開情報から確認できる店舗独自の特徴だけを訴求軸として扱います。
-    </p>
-  </div>
-</section>
-
 <section id="customer-voice">
   <div class="section-inner">
     <div class="section-label">CUSTOMER VOICE</div>
@@ -414,6 +399,19 @@ footer {
     <div class="pain-grid" style="margin-top:2.5rem">
       <article class="pain-card"><div class="pain-num">01</div><div class="pain-title">今回、一番変えたいのはどこですか？</div><p class="pain-desc">顔まわり・印象 / 長さ・シルエット / カラー・透明感 / 扱いやすさ・髪の状態 / まだ決めきれていない</p></article><article class="pain-card"><div class="pain-num">02</div><div class="pain-title">理想のイメージはどのくらい決まっていますか？</div><p class="pain-desc">参考画像まで決まっている / 雰囲気だけ決まっている / 避けたい仕上がりだけある / 似合う方向を相談したい</p></article><article class="pain-card"><div class="pain-num">03</div><div class="pain-title">絶対に避けたいことはありますか？</div><p class="pain-desc">短くしすぎたくない / 軽く・レイヤーを入れすぎたくない / 職場や学校で浮きたくない / ダメージを増やしたくない / 特にない</p></article><article class="pain-card"><div class="pain-num">04</div><div class="pain-title">普段のスタイリングはどのくらいできますか？</div><p class="pain-desc">毎日アイロンやコテを使える / 5〜10分くらいならできる / できるだけ簡単がいい / ほぼ何もしなくてもまとまってほしい</p></article><article class="pain-card"><div class="pain-num">05</div><div class="pain-title">カウンセリングでは、どんな進め方が近いですか？</div><p class="pain-desc">細かく希望を伝えたい / 画像を見ながらすり合わせたい / 似合う方向を提案してほしい / 髪の状態を見て一緒に決めたい</p></article>
     </div>
+  </div>
+</section>
+
+<section id="personalized">
+  <div class="section-inner">
+    <div class="section-label">STORE-SPECIFIC DIRECTION</div>
+    <h2 class="section-title">この店舗の情報を起点に、<em>来店前の迷い</em>まで整理する。</h2>
+    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
+      店舗の公開情報と顧客側の迷いを分けて整理し、相談・予約前の不安を減らす余地があります。
+    </p>
+    <p style="max-width:820px;margin-top:.75rem">
+      公開情報から確認できる店舗独自の特徴だけを訴求軸として扱います。
+    </p>
   </div>
 </section>
 
