@@ -12,6 +12,7 @@ on:
       - screening-automation-v1
       - lead-discovery-v1
       - lp-production-e2e-v1
+      - sales-ready-safety-v1
     paths:
       - 'sales_engine/**'
       - '.github/workflows/sales-engine-ci.yml'
@@ -52,6 +53,9 @@ jobs:
           python -m unittest -v \
             test_lp_production.py \
             test_campaign_deploy_gate.py
+
+      - name: Run Sales Ready safety tests
+        run: python -m unittest -v test_sales_ready_safety.py
 
       - name: Run existing Sales Engine tests
         run: |
