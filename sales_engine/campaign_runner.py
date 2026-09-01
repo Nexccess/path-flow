@@ -66,6 +66,17 @@ def within_send_window(now: datetime | None = None) -> bool:
     return SEND_START <= current <= SEND_END
 
 
+def campaign_is_sales_ready(conn: sqlite3.Connection, campaign_id: str) -> bool:
+    try:
+        row = conn.execute(
+            "SELECT status FROM campaigns WHERE campaign_id=?",
+            (campaign_id,),
+        ).fetchone()
+    except sqlite3.OperationalError:
+        return False
+    return bool(row and row[0] == "SALES_READY")
+
+
 def reserve_send(
     conn: sqlite3.Connection,
     store_id: str,
@@ -98,9 +109,26 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
         "blocked_invalid_email": 0,
         "blocked_deploy_not_ready": 0,
         "blocked_send_window": 0,
+        "blocked_campaign_not_sales_ready": 0,
+        "blocked_live_without_limit": 0,
         "blocked_duplicate_or_inflight": 0,
         "send_error_requires_reconcile": 0,
     }
+
+    if live and max_sends is None:
+        counts["blocked_live_without_limit"] = 1
+        print("LIVE SEND BLOCKED: --max-sends is required for every live run. No messages were sent.")
+        conn.close()
+        return counts
+
+    if live and not campaign_is_sales_ready(conn, campaign_id):
+        counts["blocked_campaign_not_sales_ready"] = 1
+        print(
+            f"LIVE SEND BLOCKED: campaign {campaign_id} is not SALES_READY. "
+            "No messages were sent."
+        )
+        conn.close()
+        return counts
 
     if live and not within_send_window():
         counts["blocked_send_window"] = 1
@@ -156,7 +184,6 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
                 counts["skipped"] += 1
                 continue
 
-            # Defense in depth: even READY_EMAIL rows are revalidated immediately before send.
             if not is_safe_email(email):
                 counts["blocked_invalid_email"] += 1
                 print(f"BLOCKED\tinvalid-email\t{store_id}\t{store_name}\t{email}")
@@ -165,10 +192,6 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
             subject, body = render(stage, store_name, store_id, lp_url)
             if live:
                 assert client is not None
-
-                # Reserve the send in DB before the external side effect.
-                # If the process crashes after the provider accepted the message but before
-                # mark_sent(), the lead remains SENDING_* and cannot be automatically resent.
                 if not reserve_send(conn, store_id, stage, campaign_id):
                     counts["blocked_duplicate_or_inflight"] += 1
                     print(f"BLOCKED\tduplicate-or-inflight\t{stage}\t{store_id}\t{store_name}")
@@ -179,9 +202,6 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
                     mark_sent(conn, store_id, stage, campaign_id=campaign_id)
                     conn.commit()
                 except Exception:
-                    # Safety-first: do not restore the prior sendable status automatically.
-                    # Delivery may already have succeeded upstream. Leave SENDING_* for
-                    # explicit reconciliation rather than risk a duplicate send.
                     counts["send_error_requires_reconcile"] += 1
                     print(f"RECONCILE_REQUIRED\t{stage}\t{store_id}\t{store_name}\t{email}")
                     raise
