@@ -57,6 +57,9 @@ jobs:
       - name: Run Sales Ready safety tests
         run: python -m unittest -v test_sales_ready_safety.py
 
+      - name: Run Sales Ready response gate tests
+        run: python -m unittest -v test_sales_ready_response_gate.py
+
       - name: Run existing Sales Engine tests
         run: |
           python -m unittest -v \
