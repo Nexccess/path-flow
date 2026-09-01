@@ -10,11 +10,12 @@ from engine import add_event, mark_response
 from graph_mail import GraphConfig, GraphMailClient, extract_store_id, sender_address
 from ollama_client import OllamaClient
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
+CAMPAIGN_ID = DEFAULT_CAMPAIGN_ID  # backward compatibility
 JST = timezone(timedelta(hours=9))
 
 
-def find_store_by_sender(conn: sqlite3.Connection, sender: str | None) -> str | None:
+def find_store_by_sender(conn: sqlite3.Connection, sender: str | None, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> str | None:
     if not sender:
         return None
     row = conn.execute(
@@ -23,20 +24,20 @@ def find_store_by_sender(conn: sqlite3.Connection, sender: str | None) -> str | 
         WHERE campaign_id=? AND lower(email)=lower(?)
         ORDER BY updated_at DESC LIMIT 1
         """,
-        (CAMPAIGN_ID, sender),
+        (campaign_id, sender),
     ).fetchone()
     return row[0] if row else None
 
 
-def store_name_for(conn: sqlite3.Connection, store_id: str) -> str:
+def store_name_for(conn: sqlite3.Connection, store_id: str, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> str:
     row = conn.execute(
         "SELECT store_name FROM leads WHERE campaign_id=? AND store_id=?",
-        (CAMPAIGN_ID, store_id),
+        (campaign_id, store_id),
     ).fetchone()
     return row[0] if row else store_id
 
 
-def apply_classification(conn: sqlite3.Connection, store_id: str, result: dict, message_id: str) -> None:
+def apply_classification(conn: sqlite3.Connection, store_id: str, result: dict, message_id: str, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> None:
     label = result.get("label", "UNKNOWN")
     confidence = float(result.get("confidence", 0))
     needs_human = bool(result.get("needs_human", True))
@@ -52,7 +53,7 @@ def apply_classification(conn: sqlite3.Connection, store_id: str, result: dict, 
                 response_at=COALESCE(response_at, ?), closed_at=?, close_reason=?, updated_at=?
             WHERE campaign_id=? AND store_id=?
             """,
-            (sales_status, label, at, at, close_reason, at, CAMPAIGN_ID, store_id),
+            (sales_status, label, at, at, close_reason, at, campaign_id, store_id),
         )
         add_event(
             conn,
@@ -60,21 +61,23 @@ def apply_classification(conn: sqlite3.Connection, store_id: str, result: dict, 
             "RESPONSE_CLASSIFIED",
             {"classification": result, "auto_closed": True},
             external_message_id=message_id,
+            campaign_id=campaign_id,
         )
         return
 
     # Safety-first: anything uncertain or commercially relevant goes to a human.
-    mark_response(conn, store_id, response_type=label, external_message_id=message_id)
+    mark_response(conn, store_id, response_type=label, external_message_id=message_id, campaign_id=campaign_id)
     add_event(
         conn,
         store_id,
         "RESPONSE_CLASSIFIED",
         {"classification": result, "auto_closed": False, "needs_human": needs_human},
         external_message_id=message_id,
+        campaign_id=campaign_id,
     )
 
 
-def run(db: Path, lookback_hours: int = 72, use_ollama: bool = True) -> tuple[int, int, int]:
+def run(db: Path, lookback_hours: int = 72, use_ollama: bool = True, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> tuple[int, int, int]:
     client = GraphMailClient(GraphConfig.from_env())
     ai = OllamaClient() if use_ollama else None
     since = datetime.now(JST) - timedelta(hours=lookback_hours)
@@ -97,20 +100,20 @@ def run(db: Path, lookback_hours: int = 72, use_ollama: bool = True) -> tuple[in
 
             store_id = extract_store_id(msg.get("subject"))
             if not store_id:
-                store_id = find_store_by_sender(conn, sender_address(msg))
+                store_id = find_store_by_sender(conn, sender_address(msg), campaign_id=campaign_id)
             if not store_id:
                 unmatched += 1
                 continue
 
             if ai is None:
-                mark_response(conn, store_id, response_type="UNKNOWN", external_message_id=message_id)
+                mark_response(conn, store_id, response_type="UNKNOWN", external_message_id=message_id, campaign_id=campaign_id)
                 conn.commit()
                 matched += 1
                 continue
 
             try:
                 result = ai.classify_response(
-                    store_name=store_name_for(conn, store_id),
+                    store_name=store_name_for(conn, store_id, campaign_id=campaign_id),
                     subject=msg.get("subject") or "",
                     body_preview=msg.get("bodyPreview") or "",
                 )
@@ -123,7 +126,7 @@ def run(db: Path, lookback_hours: int = 72, use_ollama: bool = True) -> tuple[in
                     "reason": f"ollama_error:{type(exc).__name__}",
                 }
 
-            apply_classification(conn, store_id, result, message_id)
+            apply_classification(conn, store_id, result, message_id, campaign_id=campaign_id)
             conn.commit()
             matched += 1
             classified += 1
@@ -139,6 +142,7 @@ def run(db: Path, lookback_hours: int = 72, use_ollama: bool = True) -> tuple[in
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     p.add_argument("--lookback-hours", type=int, default=72)
     p.add_argument("--no-ollama", action="store_true", help="Disable Ollama classification and send all matched replies to HUMAN_ACTION")
     p.add_argument("--ollama-health", action="store_true", help="Only test the configured Ollama endpoint/model")
@@ -149,7 +153,7 @@ def main() -> None:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return
 
-    matched, unmatched, classified = run(args.db, args.lookback_hours, use_ollama=not args.no_ollama)
+    matched, unmatched, classified = run(args.db, args.lookback_hours, use_ollama=not args.no_ollama, campaign_id=args.campaign_id)
     print(f"matched_responses={matched} unmatched_messages={unmatched} classified={classified}")
 
 

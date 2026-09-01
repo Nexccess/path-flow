@@ -1,0 +1,117 @@
+{
+  "version": "store-intelligence-gallica-yokohama-v1",
+  "lead_id": 11,
+  "identity": {
+    "lead_name": "hair salon Gallica 横浜店",
+    "official_display_name": "Gallica 横浜店",
+    "hotpepper_display_name": "Gallica 横浜【ガリカ】",
+    "name_status": "CONSISTENT"
+  },
+  "facts": [
+    {
+      "id": "location",
+      "value": "神奈川県横浜市西区高島2-6-32 横浜東口ウィスポートビル1F",
+      "source": "Gallica official",
+      "url": "https://www.hair-salon-gallica.com/salon-menu/category/yokohama/"
+    },
+    {
+      "id": "access",
+      "value": "Hot Pepper掲載では横浜駅5分。",
+      "source": "Hot Pepper Beauty",
+      "url": "https://beauty.hotpepper.jp/slnH000618779/"
+    },
+    {
+      "id": "specialties",
+      "value": ["髪質改善", "ボブ", "ショート", "ケアブリーチ"],
+      "source": "Hot Pepper Beauty",
+      "url": "https://beauty.hotpepper.jp/slnH000618779/"
+    },
+    {
+      "id": "brand_core",
+      "value": "公式サイトでは、髪を活かす・ツヤを戻す・理想の形や色をつくること、骨格や髪質を活かした理想のバランス、説明できる技術と理論を訴求している。",
+      "source": "Gallica official",
+      "url": "https://www.hair-salon-gallica.com/"
+    },
+    {
+      "id": "awards",
+      "value": "公式サイトでHOT PEPPER Beauty Award、KAMI CHARISMA Awardの受賞実績を掲載。",
+      "source": "Gallica official",
+      "url": "https://www.hair-salon-gallica.com/"
+    },
+    {
+      "id": "international",
+      "value": "公式サイトで海外客歓迎、必要時の翻訳ツール利用、参考写真提示、髪質・状態・施術履歴・希望結果を考慮した相談を案内。",
+      "source": "Gallica official",
+      "url": "https://www.hair-salon-gallica.com/contents/category/for-international-guests-%E6%B5%B7%E5%A4%96%E3%81%AE%E3%81%8A%E5%AE%A2%E6%A7%98%E3%81%B8/"
+    }
+  ],
+  "review_evidence": {
+    "rating_observed": 4.82,
+    "review_count_observed": "900件超",
+    "dimension_scores_observed": {
+      "雰囲気": 4.8,
+      "接客サービス": 4.8,
+      "技術・仕上がり": 4.9,
+      "メニュー・料金": 4.7
+    },
+    "themes": [
+      {
+        "id": "consultation",
+        "label": "相談しながら決められる",
+        "evidence": [
+          "カラーに迷っている状態から親身に相談に乗ってもらえたという口コミ",
+          "丁寧にヒアリングし、普段使うアイテムも考慮して進めたという口コミ"
+        ]
+      },
+      {
+        "id": "technical_explanation",
+        "label": "技術・理由の説明",
+        "evidence": [
+          "公式口コミページで、分かりやすく丁寧に説明しながらカットしたという声",
+          "公式ブランド訴求として『説明できる技術と理論』を掲げている"
+        ]
+      },
+      {
+        "id": "home_styling",
+        "label": "自宅での扱いやすさ・セット説明",
+        "evidence": [
+          "前髪などのセット方法を丁寧に教えてもらえたという口コミ",
+          "公式スタイル紹介で『乾かすだけで決まる』『簡単スタイリング』の説明が複数ある"
+        ]
+      },
+      {
+        "id": "long_term_planning",
+        "label": "先を見据えた提案",
+        "evidence": [
+          "1年後の予定も組み込んで提案してもらえたという口コミ"
+        ]
+      }
+    ],
+    "source": "Hot Pepper Beauty / Gallica official",
+    "urls": [
+      "https://beauty.hotpepper.jp/slnH000618779/review/",
+      "https://www.hair-salon-gallica.com/contents/category/voice/"
+    ]
+  },
+  "inferences": [
+    {
+      "id": "message_opportunity",
+      "value": "Gallicaは『お任せで綺麗にする』よりも、『髪質・履歴・希望を見ながら理由を説明し、納得して決める』方向の訴求と相性が良い可能性がある。断定ではなく、Evidenceに基づく訴求候補として扱う。"
+    },
+    {
+      "id": "technical_positioning",
+      "value": "Violetの『相談しながらなりたいへ近づける』より、Gallicaは『技術と理論で自分の髪を活かす』を前面に出す方が差別化しやすい。"
+    }
+  ],
+  "unknown": [
+    "横浜店独自の公式ブランドカラーは未確認。",
+    "受賞実績が横浜店単独か、ブランド・姉妹店を含む実績かは表示文脈ごとに異なるため、絶対表現を避ける。",
+    "口コミテーマが全スタイリストに一様に当てはまるとは限らない。"
+  ],
+  "copy_rules": [
+    "技術・理論の訴求は公式表現を根拠にする。",
+    "口コミは個人の感想として扱い、結果保証にしない。",
+    "受賞歴を技術結果の保証として使わない。",
+    "『髪質改善』『ケアブリーチ』等は店舗掲載上の得意領域として扱う。"
+  ]
+}

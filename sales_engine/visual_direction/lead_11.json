@@ -1,0 +1,88 @@
+{
+  "version": "visual-direction-gallica-yokohama-v1",
+  "lead_id": 11,
+  "design_intent": "Violetの暖色・木質・柔らかさとは明確に分け、Gallicaの『技術と理論』『髪の質感』『透明感』『説明できる美容』を編集的に表現する。公式ブランドカラーとは断定しない。",
+  "source_basis": [
+    {
+      "fact": "公式で『髪を活かす』『ツヤを戻す』『理想の形・色』『説明できる技術と理論』を訴求。",
+      "source": "Gallica official"
+    },
+    {
+      "fact": "公式スタイルでナチュラル、髪質改善、透明感、簡単スタイリング等を継続的に掲載。",
+      "source": "Gallica official style gallery"
+    }
+  ],
+  "palette": {
+    "background": "#F7F8F8",
+    "surface": "#FFFFFF",
+    "surface_alt": "#E9EEF0",
+    "text": "#171A1C",
+    "muted": "#687077",
+    "accent": "#3E6F78",
+    "accent_soft": "#C9DADD",
+    "line": "#CDD4D6",
+    "black_frame": "#171A1C"
+  },
+  "typography": {
+    "heading": "Noto Sans JP",
+    "body": "DM Sans, Noto Sans JP",
+    "direction": "Violetの美容誌的セリフ体と分け、説明性・理論性を出すためサンセリフ中心。数字や短いEvidenceを整然と配置する。"
+  },
+  "shape": {
+    "radius": "10px",
+    "border": "1px solid rgba(23,26,28,.12)",
+    "shadow": "0 14px 40px rgba(23,26,28,.06)"
+  },
+  "spacing": {
+    "section_y": "clamp(68px, 8vw, 108px)",
+    "content_max": "1120px",
+    "density": "clean"
+  },
+  "hero": {
+    "background": "cool white to pale gray gradient",
+    "eyebrow": "GALLICA YOKOHAMA / PATH-FLOW PERSONALIZED",
+    "image_direction": "将来画像を使う場合は髪のツヤ・質感・カットラインが分かる実スタイルを優先。未確認画像は追加しない。",
+    "avoid": [
+      "Violetと同じ暖色ベージュ",
+      "木質感の強調",
+      "濃紺ゴールド",
+      "高級ホテル風"
+    ]
+  },
+  "sections": [
+    {
+      "id": "personalized",
+      "style": "白背景。技術・理論・髪質条件を短く整理。"
+    },
+    {
+      "id": "customer-voice",
+      "style": "カウンセリングチェックシートよりも、技術相談メモのようにクリーンで構造的。"
+    },
+    {
+      "id": "proof",
+      "style": "Evidenceをラベル＋短文で整然と見せる。"
+    }
+  ],
+  "interaction": {
+    "motion": "small",
+    "hover": "subtle",
+    "cta": "自分の髪に合う条件を整理する",
+    "cta_style": "charcoal with cool-teal accent"
+  },
+  "forbidden": [
+    "Gallica公式色として未確認色を断定する",
+    "VioletのVisual Directionを流用する",
+    "受賞バッジ風の誇張",
+    "美容医療のような効果保証表現"
+  ],
+  "variant": {
+    "hero_variant": "technical-grid",
+    "section_order": [
+      "personalized",
+      "customer-voice"
+    ],
+    "typography_mode": "sans-technical",
+    "card_style": "structured",
+    "density": "clean"
+  }
+}

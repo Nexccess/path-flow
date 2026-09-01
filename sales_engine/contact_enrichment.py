@@ -11,7 +11,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
+CAMPAIGN_ID = DEFAULT_CAMPAIGN_ID  # backward compatibility
 JST = timezone(timedelta(hours=9))
 USER_AGENT = "Mozilla/5.0 (compatible; PathFlowContactEnrichment/0.5; +https://sample.pathflow.org)"
 TIMEOUT_SECONDS = 8
@@ -302,17 +303,17 @@ def choose_channel(
     return status, None, fallback_confidence or "LOW", 0
 
 
-def print_summary(conn: sqlite3.Connection) -> None:
+def print_summary(conn: sqlite3.Connection, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> None:
     counts = {
         status: conn.execute(
             "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status=?",
-            (CAMPAIGN_ID, status),
+            (campaign_id, status),
         ).fetchone()[0]
         for status in CHANNEL_ORDER
     }
     known = sum(counts.values())
     total = conn.execute(
-        "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (CAMPAIGN_ID,)
+        "SELECT COUNT(*) FROM leads WHERE campaign_id=?", (campaign_id,)
     ).fetchone()[0]
     other = total - known
     print("--- channel_summary ---")
@@ -329,12 +330,13 @@ def run(
     force: bool = False,
     summary_only: bool = False,
     status_filter: str | None = None,
+    campaign_id: str = DEFAULT_CAMPAIGN_ID,
 ):
     conn = sqlite3.connect(db)
     try:
         migrate_contact_columns(conn)
         if summary_only:
-            print_summary(conn)
+            print_summary(conn, campaign_id=campaign_id)
             return
 
         sql = """
@@ -343,7 +345,7 @@ def run(
             FROM leads
             WHERE campaign_id=?
         """
-        params: list[object] = [CAMPAIGN_ID]
+        params: list[object] = [campaign_id]
         if status_filter:
             sql += " AND contact_status=?"
             params.append(status_filter)
@@ -357,7 +359,7 @@ def run(
             params.append(limit)
 
         rows = conn.execute(sql, params).fetchall()
-        print(f"enrichment_targets={len(rows)} force={force} status_filter={status_filter or '-'}")
+        print(f"enrichment_targets={len(rows)} campaign_id={campaign_id} force={force} status_filter={status_filter or '-'}")
         for (
             store_id, store_name, store_url, contact_source_url, _,
             existing_email, existing_form, existing_line, existing_instagram, phone,
@@ -416,14 +418,14 @@ def run(
                     status, channel, email, form, line, instagram, result.get("source"), now_iso(),
                     confidence, allowed,
                     "READY" if status == "READY_EMAIL" else ("FORM_READY" if status == "READY_FORM" else "REVIEW"),
-                    now_iso(), CAMPAIGN_ID, store_id,
+                    now_iso(), campaign_id, store_id,
                 ),
             )
             conn.commit()
             print(f"{store_id}\t{store_name}\t{status}\t{channel or '-'}\t{start_url or '-'}")
             time.sleep(0.2)
 
-        print_summary(conn)
+        print_summary(conn, campaign_id=campaign_id)
     finally:
         conn.close()
 
@@ -431,12 +433,13 @@ def run(
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     p.add_argument("--limit", type=int)
     p.add_argument("--force", action="store_true")
     p.add_argument("--summary", action="store_true", help="Print channel counts without enrichment")
     p.add_argument("--status", help="Only enrich leads with this exact contact_status")
     args = p.parse_args()
-    run(args.db, args.limit, args.force, args.summary, args.status)
+    run(args.db, args.limit, args.force, args.summary, args.status, campaign_id=args.campaign_id)
 
 
 if __name__ == "__main__":

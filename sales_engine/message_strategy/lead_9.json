@@ -1,0 +1,76 @@
+{
+  "version": "message-strategy-violet-yokohama-v1",
+  "lead_id": 9,
+  "objective": "Violet横浜の店舗固有Evidenceと美容室Customer Voiceを接続し、来店前の不安を整理できる顧客向けLPメッセージを作る。",
+  "primary_audience": {
+    "description": "ヘアスタイルの希望はあるが、細部まで言語化しきれていない美容室利用者。特に参考画像・レイヤー・カラー・日常の再現性について相談しながら決めたい層。",
+    "evidence_note": "Hot Pepperの年代分布では女性20代が最大、次いで30代。これは参考分布であり、対象を限定する根拠にはしない。"
+  },
+  "core_message": {
+    "headline_direction": "決めきってから行かなくていい。『なりたい』と『避けたい』を整理して、相談しながら仕上がりへ近づける。",
+    "supporting_message": "Violet横浜では、丁寧なヒアリング、希望イメージのすり合わせ、セット方法の説明を評価する口コミが確認できる。来店前に希望・制約・普段のスタイリング習慣を整理しておくことで、相談の起点を作る。",
+    "tone": "断定しすぎず、相談しやすさと具体性を重視。"
+  },
+  "proof_pillars": [
+    {
+      "id": "consultation",
+      "title": "希望を言葉にしきれなくても、相談の余地がある",
+      "evidence": "ざっくりした希望でも丁寧に相談しながら仕上げてもらえた、複雑な要望でも理想が伝わったという口コミEvidence。"
+    },
+    {
+      "id": "reproducibility",
+      "title": "サロン帰りだけでなく、日常で扱えるかも相談材料にする",
+      "evidence": "セットの仕方に合わせたカット、セット方法のレクチャーが助かったという口コミEvidence。"
+    },
+    {
+      "id": "specialties",
+      "title": "レイヤー・髪質改善・韓国系スタイルを検討しやすい",
+      "evidence": "Hot Pepper掲載上の店舗訴求。"
+    },
+    {
+      "id": "access",
+      "title": "横浜駅直結",
+      "evidence": "公式・Hot Pepper双方でNEWoMan横浜3F、横浜駅直結を確認。"
+    }
+  ],
+  "customer_voice_to_evidence_map": [
+    {
+      "customer_voice": "参考画像を見せても意図がずれる不安",
+      "store_evidence": "丁寧なヒアリング・希望イメージのすり合わせを評価する口コミ",
+      "allowed_message": "希望のどこが好きか、避けたい部分は何かを先に整理して相談する。",
+      "forbidden_message": "写真通りに必ず仕上がる"
+    },
+    {
+      "customer_voice": "レイヤーや毛量を入れすぎてほしくない",
+      "store_evidence": "レイヤーカットを店舗訴求として掲げている",
+      "allowed_message": "入れたい／入れたくない範囲を来店前に整理しておく。",
+      "forbidden_message": "失敗しないレイヤーカット"
+    },
+    {
+      "customer_voice": "自宅で再現できるか",
+      "store_evidence": "セット方法のレクチャーを評価する口コミ",
+      "allowed_message": "普段使えるスタイリング時間や道具を伝えて相談する。",
+      "forbidden_message": "誰でも簡単に再現できる"
+    }
+  ],
+  "cta": {
+    "primary": "来店前の希望を整理する",
+    "secondary": "Violet横浜について確認する",
+    "diagnosis_role": "適合スコアではなく、希望・避けたいこと・普段の再現条件を整理する事前カウンセリング補助。"
+  },
+  "content_order": [
+    "店舗名と顧客ベネフィット",
+    "来店前Customer Voice",
+    "希望整理の質問",
+    "Violet固有Evidence",
+    "相談時に伝える要点",
+    "予約・店舗情報"
+  ],
+  "forbidden_claims": [
+    "必ず希望通りになる",
+    "失敗しない",
+    "誰にでも似合う",
+    "口コミ評価を全スタッフの保証として扱う",
+    "KAMI CHARISMA受賞を技術の絶対保証として表現する"
+  ]
+}

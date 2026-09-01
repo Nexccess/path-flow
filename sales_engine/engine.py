@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-CAMPAIGN_ID = "PF-NAIL-001"
+DEFAULT_CAMPAIGN_ID = "PF-NAIL-001"
 JST = timezone(timedelta(hours=9))
 ACTIONABLE_CONTACT_STATUSES = {
     "READY_EMAIL",
@@ -26,7 +26,7 @@ def parse_dt(value: str | None):
     return datetime.fromisoformat(value) if value else None
 
 
-def add_event(conn, store_id: str, event_type: str, payload=None, external_message_id=None):
+def add_event(conn, store_id: str, event_type: str, payload=None, external_message_id=None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     conn.execute(
         """
         INSERT OR IGNORE INTO events
@@ -34,7 +34,7 @@ def add_event(conn, store_id: str, event_type: str, payload=None, external_messa
         VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
-            CAMPAIGN_ID,
+            campaign_id,
             store_id,
             event_type,
             now_iso(),
@@ -44,7 +44,7 @@ def add_event(conn, store_id: str, event_type: str, payload=None, external_messa
     )
 
 
-def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
+def mark_sent(conn, store_id: str, stage: str, at: str | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = at or now_iso()
     mapping = {
         "initial": ("SENT", "initial_sent_at", "DM_INITIAL_SENT"),
@@ -54,7 +54,7 @@ def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
     status, field, event_type = mapping[stage]
     lead = conn.execute(
         "SELECT sales_status, human_action FROM leads WHERE campaign_id=? AND store_id=?",
-        (CAMPAIGN_ID, store_id),
+        (campaign_id, store_id),
     ).fetchone()
     if not lead:
         raise ValueError(f"Unknown store_id: {store_id}")
@@ -62,12 +62,12 @@ def mark_sent(conn, store_id: str, stage: str, at: str | None = None):
         raise ValueError(f"Automated send blocked for store_id={store_id}, status={lead[0]}")
     conn.execute(
         f"UPDATE leads SET sales_status=?, {field}=?, updated_at=? WHERE campaign_id=? AND store_id=?",
-        (status, at, at, CAMPAIGN_ID, store_id),
+        (status, at, at, campaign_id, store_id),
     )
-    add_event(conn, store_id, event_type, {"sent_at": at})
+    add_event(conn, store_id, event_type, {"sent_at": at}, campaign_id=campaign_id)
 
 
-def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_message_id=None):
+def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_message_id=None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = now_iso()
     conn.execute(
         """
@@ -76,7 +76,7 @@ def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_
             response_at=COALESCE(response_at, ?), updated_at=?
         WHERE campaign_id=? AND store_id=?
         """,
-        (response_type, at, at, CAMPAIGN_ID, store_id),
+        (response_type, at, at, campaign_id, store_id),
     )
     add_event(
         conn,
@@ -84,10 +84,11 @@ def mark_response(conn, store_id: str, response_type: str = "UNKNOWN", external_
         "RESPONSE_RECEIVED",
         {"response_type": response_type},
         external_message_id=external_message_id,
+        campaign_id=campaign_id,
     )
 
 
-def due_actions(conn, now: datetime | None = None):
+def due_actions(conn, now: datetime | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     now = now or datetime.now(JST)
     placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     rows = conn.execute(
@@ -98,7 +99,7 @@ def due_actions(conn, now: datetime | None = None):
         WHERE campaign_id=?
           AND contact_status IN ({placeholders})
         """,
-        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
+        (campaign_id, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchall()
     actions = []
     for store_id, store_name, status, initial_at, f1_at, f2_at, human_action, _contact_status in rows:
@@ -119,7 +120,7 @@ def due_actions(conn, now: datetime | None = None):
     return actions
 
 
-def close_no_response(conn, store_id: str):
+def close_no_response(conn, store_id: str, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     at = now_iso()
     conn.execute(
         """
@@ -127,30 +128,30 @@ def close_no_response(conn, store_id: str):
         SET sales_status='CLOSED_NO_RESPONSE', closed_at=?, close_reason='NO_RESPONSE', updated_at=?
         WHERE campaign_id=? AND store_id=? AND human_action=0
         """,
-        (at, at, CAMPAIGN_ID, store_id),
+        (at, at, campaign_id, store_id),
     )
-    add_event(conn, store_id, "CLOSED_NO_RESPONSE")
+    add_event(conn, store_id, "CLOSED_NO_RESPONSE", campaign_id=campaign_id)
 
 
-def daily_summary(conn):
+def daily_summary(conn, campaign_id: str = DEFAULT_CAMPAIGN_ID):
     result = {}
     for status, count in conn.execute(
         "SELECT sales_status, COUNT(*) FROM leads WHERE campaign_id=? GROUP BY sales_status",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ):
         result[status] = count
     result["HUMAN_ACTION"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=? AND human_action=1",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ).fetchone()[0]
     placeholders = ",".join("?" for _ in ACTIONABLE_CONTACT_STATUSES)
     result["ACTIONABLE_CONTACTS"] = conn.execute(
         f"SELECT COUNT(*) FROM leads WHERE campaign_id=? AND contact_status IN ({placeholders})",
-        (CAMPAIGN_ID, *sorted(ACTIONABLE_CONTACT_STATUSES)),
+        (campaign_id, *sorted(ACTIONABLE_CONTACT_STATUSES)),
     ).fetchone()[0]
     result["TOTAL"] = conn.execute(
         "SELECT COUNT(*) FROM leads WHERE campaign_id=?",
-        (CAMPAIGN_ID,),
+        (campaign_id,),
     ).fetchone()[0]
     return result
 
@@ -167,6 +168,7 @@ def main():
     configure_stdout()
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=Path, default=Path("sales_engine.db"))
+    p.add_argument("--campaign-id", default=DEFAULT_CAMPAIGN_ID)
     p.add_argument("--summary", action="store_true")
     p.add_argument("--due", action="store_true")
     p.add_argument("--due-count", action="store_true", help="Print only the number of due actions")
@@ -174,11 +176,11 @@ def main():
     conn = sqlite3.connect(args.db)
     try:
         if args.summary:
-            print(json.dumps(daily_summary(conn), ensure_ascii=False, indent=2))
+            print(json.dumps(daily_summary(conn, args.campaign_id), ensure_ascii=False, indent=2))
         if args.due_count:
-            print(len(due_actions(conn)))
+            print(len(due_actions(conn, campaign_id=args.campaign_id)))
         elif args.due:
-            for action in due_actions(conn):
+            for action in due_actions(conn, campaign_id=args.campaign_id):
                 print("\t".join(action))
     finally:
         conn.close()

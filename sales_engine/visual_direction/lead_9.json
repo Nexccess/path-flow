@@ -1,0 +1,92 @@
+{
+  "version": "visual-direction-violet-yokohama-v1",
+  "lead_id": 9,
+  "design_intent": "Violet横浜の実在店舗空間と美容室としての軽やかさを反映し、旧B2Bテンプレート感を消す。過剰な装飾ではなく、自然光・木質・黒フレーム・余白で美容写真と顧客メッセージが映える方向に寄せる。",
+  "source_basis": [
+    {
+      "fact": "オーク調の明るい木材で統一されたナチュラル空間",
+      "source": "Violet official location"
+    },
+    {
+      "fact": "柱のブラックフレームと間接照明でモダンさを加えている",
+      "source": "Violet official location"
+    },
+    {
+      "fact": "大きなガラス窓から自然光が入り、白すぎない暖色照明で肌や髪が綺麗に映る",
+      "source": "Violet official location"
+    }
+  ],
+  "palette": {
+    "background": "#F5F1EA",
+    "surface": "#FFFDFC",
+    "surface_alt": "#ECE5DA",
+    "text": "#211F1C",
+    "muted": "#746E67",
+    "accent": "#6D5B8C",
+    "accent_soft": "#D8CFE7",
+    "line": "#CFC5B8",
+    "black_frame": "#1C1B1A"
+  },
+  "typography": {
+    "heading": "Noto Serif JP",
+    "body": "DM Sans, Noto Sans JP",
+    "direction": "ヘッドラインは美容誌のように余白を広く、本文は読みやすく。英字ラベルは控えめ。"
+  },
+  "shape": {
+    "radius": "16px",
+    "border": "1px solid rgba(33,31,28,.14)",
+    "shadow": "0 18px 50px rgba(33,31,28,.08)"
+  },
+  "spacing": {
+    "section_y": "clamp(72px, 9vw, 120px)",
+    "content_max": "1120px",
+    "density": "airy"
+  },
+  "hero": {
+    "background": "soft warm neutral gradient",
+    "eyebrow": "VIOLET YOKOHAMA / PATH-FLOW PERSONALIZED",
+    "image_direction": "将来写真を入れる場合は、サロン空間・髪の質感・自然光が伝わる実店舗/実スタイル写真を優先。現段階では無理に画像を追加しない。",
+    "avoid": [
+      "濃紺全面",
+      "金色メイン",
+      "SaaSダッシュボード風",
+      "企業向け数値訴求"
+    ]
+  },
+  "sections": [
+    {
+      "id": "personalized",
+      "style": "白〜暖色サーフェス、広い余白、Evidenceを短く見せる"
+    },
+    {
+      "id": "customer-voice",
+      "style": "質問カードは美容カウンセリングシートのように柔らかく。番号より質問文を主役にする"
+    },
+    {
+      "id": "proof",
+      "style": "口コミEvidence・得意スタイル・アクセスを3〜4枚のカードで表示"
+    }
+  ],
+  "interaction": {
+    "motion": "small",
+    "hover": "subtle",
+    "cta": "来店前の希望を整理する",
+    "cta_style": "black-frame or violet accent; no flashing or heavy animation"
+  },
+  "forbidden": [
+    "B2B SaaSの濃紺ゴールド世界観を残す",
+    "高級感を出すためだけの黒背景全面使用",
+    "Violet公式ロゴを無断で生成・模倣する",
+    "未確認のブランドカラーを公式色として断定する"
+  ],
+  "variant": {
+    "hero_variant": "editorial-soft",
+    "section_order": [
+      "customer-voice",
+      "personalized"
+    ],
+    "typography_mode": "serif-editorial",
+    "card_style": "soft-rounded",
+    "density": "airy"
+  }
+}

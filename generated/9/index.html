@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Violet Yokohama (バイオレットヨコハマ/横浜店)様向け Path-Flow 個別提案 | Nexccess</title>
+<meta name="pathflow-lead-id" content="9">
+<meta name="pathflow-company" content="Violet Yokohama (バイオレットヨコハマ/横浜店)">
+<meta name="description" content="横浜駅の美容室としての強みと、実際の顧客が来店前に迷いやすい点を分けて整理した個別提案です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ─── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --navy:       #06101f;
+  --navy-mid:   #0d1e35;
+  --navy-light: #162844;
+  --gold:       #c8a45a;
+  --gold-dim:   #8b6e37;
+  --gold-light: #e8c97a;
+  --white:      #f4f0e8;
+  --muted:      #8a9ab5;
+  --border:     rgba(200,164,90,.18);
+  --glass:      rgba(13,30,53,.72);
+  --crimson:    #8b2635;
+
+  --font-serif: 'Noto Serif JP', serif;
+  --font-sans:  'DM Sans', sans-serif;
+  --font-mono:  'Space Mono', monospace;
+
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-in:  cubic-bezier(.7,0,.84,0);
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 16px; }
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
+
+/* ─── NOISE OVERLAY ───────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0;
+}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 3rem;
+  transition: background .4s, backdrop-filter .4s, border-color .4s;
+  border-bottom: 1px solid transparent;
+}
+nav.scrolled {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-color: var(--border);
+}
+.nav-logo {
+  font-family: var(--font-serif);
+  font-size: .95rem;
+  letter-spacing: .08em;
+  color: var(--gold);
+  display: flex; align-items: center; gap: .75rem;
+}
+.nav-logo-mark {
+  width: 28px; height: 28px;
+  border: 1.5px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .65rem; font-family: var(--font-mono); color: var(--gold);
+}
+.nav-links { display: flex; gap: 2.5rem; align-items: center; }
+.nav-links a {
+  font-size: .82rem; letter-spacing: .05em; color: var(--muted);
+  transition: color .2s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-cta {
+  font-size: .8rem; font-weight: 500; letter-spacing: .08em;
+  padding: .55rem 1.4rem;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  transition: background .2s, color .2s;
+}
+.nav-cta:hover { background: var(--gold); color: var(--navy); }
+
+/* ─── HERO ────────────────────────────────────────────────── */
+#hero {
+  position: relative; min-height: 100vh;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
+  padding: 8rem 3rem 5rem;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(200,164,90,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(139,38,53,.08) 0%, transparent 60%),
+    linear-gradient(160deg, #06101f 0%, #0a1828 100%);
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,164,90,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,164,90,.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 60% 50%, black 30%, transparent 80%);
+}
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: .72rem; letter-spacing: .2em;
+  color: var(--gold); margin-bottom: 1.5rem;
+  opacity: 0; animation: fadeUp .8s var(--ease-out) .2s forwards;
+}
+.hero-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 700; line-height: 1.25;
+  max-width: 720px;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .35s forwards;
+}
+.hero-title em {
+  font-style: normal; color: var(--gold);
+  display: block;
+}
+.hero-sub {
+  margin-top: 1.5rem; max-width: 520px;
+  font-size: 1rem; color: var(--muted); line-height: 1.8;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .5s forwards;
+}
+.hero-actions {
+  margin-top: 2.5rem; display: flex; gap: 1rem; align-items: center;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .65s forwards;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: var(--gold); color: var(--navy);
+  font-size: .88rem; font-weight: 600; letter-spacing: .06em;
+  padding: .85rem 2rem;
+  transition: background .2s, transform .2s;
+}
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+.btn-secondary {
+  font-size: .85rem; color: var(--muted); letter-spacing: .05em;
+  display: flex; align-items: center; gap: .4rem;
+  transition: color .2s;
+}
+.btn-secondary:hover { color: var(--white); }
+.btn-arrow { font-size: 1.1em; transition: transform .2s; }
+.btn-secondary:hover .btn-arrow { transform: translateX(4px); }
+.hero-stats {
+  position: absolute; right: 3rem; bottom: 4rem;
+  display: flex; gap: 3rem;
+  opacity: 0; animation: fadeUp .9s var(--ease-out) .8s forwards;
+}
+.hero-stat-num {
+  font-family: var(--font-serif); font-size: 2.4rem; font-weight: 700;
+  color: var(--gold); line-height: 1;
+}
+.hero-stat-label {
+  font-size: .72rem; color: var(--muted); letter-spacing: .05em; margin-top: .3rem;
+}
+.hero-scroll-hint {
+  position: absolute; bottom: 1.5rem; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+  font-size: .68rem; letter-spacing: .15em; color: var(--muted);
+  opacity: 0; animation: fadeIn 1s .ease-out 1.2s forwards;
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(var(--gold), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+/* ─── SECTIONS ────────────────────────────────────────────── */
+section { position: relative; z-index: 1; }
+.section-inner { max-width: 1200px; margin: 0 auto; padding: 0 3rem; }
+.section-label {
+  font-family: var(--font-mono);
+  font-size: .7rem; letter-spacing: .2em; color: var(--gold);
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-weight: 700; line-height: 1.3;
+}
+.section-title em { font-style: normal; color: var(--gold); }
+
+/* ─── PAIN ────────────────────────────────────────────────── */
+#pain {
+  padding: 8rem 0;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-mid) 100%);
+}
+.pain-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1.5px; margin-top: 4rem;
+  border: 1.5px solid var(--border);
+}
+.pain-card {
+  background: var(--navy-mid); padding: 2.5rem;
+  transition: background .3s;
+}
+.pain-card:hover { background: var(--navy-light); }
+.pain-num {
+  font-family: var(--font-mono); font-size: 2.5rem;
+  color: rgba(200,164,90,.12); font-weight: 700; line-height: 1;
+  margin-bottom: 1.5rem;
+}
+.pain-title { font-size: 1.05rem; font-weight: 600; margin-bottom: .75rem; }
+.pain-desc { font-size: .88rem; color: var(--muted); line-height: 1.8; }
+
+/* ─── FOOTER ──────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 3rem; text-align: center;
+}
+.footer-logo {
+  font-family: var(--font-serif); font-size: 1rem;
+  color: var(--gold); margin-bottom: .75rem;
+}
+.footer-copy { font-size: .78rem; color: var(--muted); }
+
+/* ─── ANIMATIONS ──────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: .4; } 50% { opacity: 1; }
+}
+
+/* ─── REVEAL ──────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .7s var(--ease-out), transform .7s var(--ease-out);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 900px) {
+  nav { padding: 1rem 1.5rem; }
+  .nav-links { display: none; }
+  #hero { padding: 7rem 1.5rem 4rem; }
+  .hero-stats { position: static; margin-top: 3rem; flex-direction: column; gap: 1.5rem; }
+  .section-inner { padding: 0 1.5rem; }
+}
+</style>
+
+<style id="pathflow-visual-direction">
+:root {
+  --navy: #F5F1EA;
+  --navy-mid: #FFFDFC;
+  --navy-light: #ECE5DA;
+  --gold: #6D5B8C;
+  --gold-dim: #CFC5B8;
+  --gold-light: #D8CFE7;
+  --white: #211F1C;
+  --muted: #746E67;
+  --border: #CFC5B8;
+  --glass: #FFFDFCe6;
+  --crimson: #6D5B8C;
+  --black-frame: #1C1B1A;
+}
+body { background:var(--navy); color:var(--white); }
+body::before { opacity:.12; }
+.section-inner { max-width:1120px; }
+.section-title, .hero-title, .footer-logo {
+  font-family:'Noto Serif JP',serif;
+  font-weight:700;
+}
+.section-label { letter-spacing:.18em; }
+nav.scrolled {
+  background:#FFFDFCe8;
+  backdrop-filter:blur(18px);
+}
+.nav-logo, .nav-logo-mark, .section-label { color:var(--gold); }
+.nav-logo-mark { border-color:var(--gold-dim); }
+#hero {
+  min-height:82vh;
+  background:linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 56%,#ECE5DA 100%);
+}
+.hero-bg { background:radial-gradient(ellipse 45% 55% at 78% 30%, #D8CFE755 0%, transparent 70%),radial-gradient(ellipse 55% 65% at 20% 85%, #CFC5B855 0%, transparent 70%),linear-gradient(145deg,#FFFDFC 0%,#F5F1EA 100%); }
+
+.hero-title { max-width:780px; letter-spacing:-.02em; }
+.hero-sub { max-width:650px; }
+.hero-grid { opacity:.12; }
+
+.btn-primary {
+  background:var(--black-frame);
+  color:#FFFDFC;
+  border-radius:999px;
+  padding-inline:1.6rem;
+}
+.btn-primary:hover { opacity:.9; }
+.btn-secondary, .nav-links a { color:var(--muted); }
+.nav-cta {
+  border-color:var(--black-frame);
+  color:var(--black-frame);
+  border-radius:999px;
+}
+.nav-cta:hover { background:var(--black-frame); color:#FFFDFC; }
+#personalized, #customer-voice {
+  padding:calc(clamp(72px, 9vw, 120px) * 1) 0;
+}
+#personalized { background:#FFFDFC; }
+#customer-voice { background:#ECE5DA; }
+#customer-voice .pain-grid {
+  gap:1rem;
+  border:0;
+}
+#customer-voice .pain-card {
+  background:#FFFDFC;
+  border:1px solid rgba(33,31,28,.14);
+  border-radius:16px;
+  box-shadow:0 18px 50px rgba(33,31,28,.08);
+  padding:2.5rem;
+  
+}
+#customer-voice .pain-num {
+  font-size:.72rem;
+  color:var(--gold);
+  margin-bottom:.9rem;
+  letter-spacing:.16em;
+}
+#customer-voice .pain-title {
+  font-family:'Noto Serif JP',serif;
+  font-size:1.08rem;
+  line-height:1.65;
+}
+footer { background:var(--black-frame); color:#F5F1EA; }
+.footer-copy { color:#CFC5B8; }
+</style>
+
+</head>
+<body data-pf-hero="editorial-soft" data-pf-type="serif-editorial" data-pf-cards="soft-rounded" data-pf-density="airy">
+
+<!-- ─── NAV ─────────────────────────────────────────────────── -->
+<nav id="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">NX</div>
+    Nexcess
+  </div>
+  <div class="nav-links"><a href="#personalized">店舗別提案</a><a href="#customer-voice">来店前診断</a></div>
+  <a class="nav-cta" href="#customer-voice">来店前の希望を整理する</a>
+</nav>
+
+<!-- ─── HERO ─────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="hero-bg">
+    <div class="hero-grid"></div>
+  </div>
+  <div class="hero-eyebrow">VIOLET YOKOHAMA / PATH-FLOW PERSONALIZED</div>
+  <h1 class="hero-title">Violet Yokohama (バイオレットヨコハマ/横浜店)の魅力を、来店前の不安まで含めて伝える。</h1>
+  <p class="hero-sub">横浜駅の美容室としての強みと、実際の顧客が来店前に迷いやすい点を分けて整理した個別提案です。</p>
+  <div class="hero-actions"><a class="btn-primary" href="#customer-voice">来店前の希望を整理する</a><a href="#personalized" class="btn-secondary">この店舗向け提案を見る <span class="btn-arrow">→</span></a></div>
+  <div class="hero-stats"><div><div class="hero-stat-num">5</div><div class="hero-stat-label">来店前に整理する質問</div></div><div><div class="hero-stat-num">VOICE</div><div class="hero-stat-label">顧客の迷いを分離して反映</div></div><div><div class="hero-stat-num">STORE</div><div class="hero-stat-label">店舗固有情報を優先</div></div></div><div class="hero-scroll-hint">
+    <div class="scroll-line"></div>
+    SCROLL
+  </div>
+</section>
+
+<section id="customer-voice">
+  <div class="section-inner">
+    <div class="section-label">CUSTOMER VOICE</div>
+    <h2 class="section-title">美容室を選ぶ前に、<em>何を確認したいか。</em></h2>
+    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
+      以下は店舗の口コミ事実ではなく、美容室利用者が来店前に迷いやすい論点を整理した質問です。
+      店舗固有の強みと混同せず、診断入力として扱います。
+    </p>
+    <div class="pain-grid" style="margin-top:2.5rem">
+      <article class="pain-card"><div class="pain-num">01</div><div class="pain-title">今回、一番変えたいのはどこですか？</div><p class="pain-desc">顔まわり・印象 / 長さ・シルエット / カラー・透明感 / 扱いやすさ・髪の状態 / まだ決めきれていない</p></article><article class="pain-card"><div class="pain-num">02</div><div class="pain-title">理想のイメージはどのくらい決まっていますか？</div><p class="pain-desc">参考画像まで決まっている / 雰囲気だけ決まっている / 避けたい仕上がりだけある / 似合う方向を相談したい</p></article><article class="pain-card"><div class="pain-num">03</div><div class="pain-title">絶対に避けたいことはありますか？</div><p class="pain-desc">短くしすぎたくない / 軽く・レイヤーを入れすぎたくない / 職場や学校で浮きたくない / ダメージを増やしたくない / 特にない</p></article><article class="pain-card"><div class="pain-num">04</div><div class="pain-title">普段のスタイリングはどのくらいできますか？</div><p class="pain-desc">毎日アイロンやコテを使える / 5〜10分くらいならできる / できるだけ簡単がいい / ほぼ何もしなくてもまとまってほしい</p></article><article class="pain-card"><div class="pain-num">05</div><div class="pain-title">カウンセリングでは、どんな進め方が近いですか？</div><p class="pain-desc">細かく希望を伝えたい / 画像を見ながらすり合わせたい / 似合う方向を提案してほしい / 髪の状態を見て一緒に決めたい</p></article>
+    </div>
+  </div>
+</section>
+
+<section id="personalized">
+  <div class="section-inner">
+    <div class="section-label">STORE-SPECIFIC DIRECTION</div>
+    <h2 class="section-title">この店舗の情報を起点に、<em>来店前の迷い</em>まで整理する。</h2>
+    <p style="max-width:820px;color:var(--muted);margin-top:1.25rem">
+      店舗の公開情報と顧客側の迷いを分けて整理し、相談・予約前の不安を減らす余地があります。
+    </p>
+    <p style="max-width:820px;margin-top:.75rem">
+      公開情報から確認できる店舗独自の特徴だけを訴求軸として扱います。
+    </p>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─────────────────────────────────────────────────── -->
+<footer><div class="footer-logo">Path-Flow</div><p class="footer-copy">店舗ごとの公開情報と顧客側の来店前ニーズを分離して構成した個別提案ページです。</p></footer>
+
+</body>
+</html>
