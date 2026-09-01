@@ -36,6 +36,12 @@ BAD_LOCAL_ENDINGS = (
     ".ico",
 )
 
+SEND_RESERVATIONS = {
+    "initial": ("READY", "SENDING_INITIAL"),
+    "followup1": ("SENT", "SENDING_FOLLOWUP_1"),
+    "followup2": ("FOLLOWUP_1", "SENDING_FOLLOWUP_2"),
+}
+
 
 def is_safe_email(value: str | None) -> bool:
     if not value:
@@ -54,8 +60,31 @@ def is_safe_email(value: str | None) -> bool:
 
 def within_send_window(now: datetime | None = None) -> bool:
     now = now or datetime.now(JST)
+    if now.weekday() >= 5:
+        return False
     current = now.timetz().replace(tzinfo=None)
     return SEND_START <= current <= SEND_END
+
+
+def reserve_send(
+    conn: sqlite3.Connection,
+    store_id: str,
+    stage: str,
+    campaign_id: str,
+) -> bool:
+    expected_status, reserved_status = SEND_RESERVATIONS[stage]
+    at = datetime.now(JST).isoformat(timespec="seconds")
+    cur = conn.execute(
+        """
+        UPDATE leads
+        SET sales_status=?, updated_at=?
+        WHERE campaign_id=? AND store_id=?
+          AND sales_status=? AND human_action=0
+        """,
+        (reserved_status, at, campaign_id, store_id, expected_status),
+    )
+    conn.commit()
+    return cur.rowcount == 1
 
 
 def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id: str = DEFAULT_CAMPAIGN_ID) -> dict:
@@ -69,6 +98,8 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
         "blocked_invalid_email": 0,
         "blocked_deploy_not_ready": 0,
         "blocked_send_window": 0,
+        "blocked_duplicate_or_inflight": 0,
+        "send_error_requires_reconcile": 0,
     }
 
     if live and not within_send_window():
@@ -134,9 +165,26 @@ def run(db: Path, live: bool = False, max_sends: int | None = None, campaign_id:
             subject, body = render(stage, store_name, store_id, lp_url)
             if live:
                 assert client is not None
-                client.send_text(email, subject, body, dry_run=False)
-                mark_sent(conn, store_id, stage, campaign_id=campaign_id)
-                conn.commit()
+
+                # Reserve the send in DB before the external side effect.
+                # If the process crashes after the provider accepted the message but before
+                # mark_sent(), the lead remains SENDING_* and cannot be automatically resent.
+                if not reserve_send(conn, store_id, stage, campaign_id):
+                    counts["blocked_duplicate_or_inflight"] += 1
+                    print(f"BLOCKED\tduplicate-or-inflight\t{stage}\t{store_id}\t{store_name}")
+                    continue
+
+                try:
+                    client.send_text(email, subject, body, dry_run=False)
+                    mark_sent(conn, store_id, stage, campaign_id=campaign_id)
+                    conn.commit()
+                except Exception:
+                    # Safety-first: do not restore the prior sendable status automatically.
+                    # Delivery may already have succeeded upstream. Leave SENDING_* for
+                    # explicit reconciliation rather than risk a duplicate send.
+                    counts["send_error_requires_reconcile"] += 1
+                    print(f"RECONCILE_REQUIRED\t{stage}\t{store_id}\t{store_name}\t{email}")
+                    raise
             else:
                 print(f"DRY-RUN\t{stage}\t{store_id}\t{store_name}\t{email}\t{subject}")
 
